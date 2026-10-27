@@ -24,8 +24,8 @@ private func router(_ table: [String: Data]) -> StubTransport {
     }
 }
 
-private let page1Path = "/api/v1/monitors?limit=100"
-private let page2Path = "/api/v1/monitors?limit=100&cursor=9"
+private let page1Path = "/api/v1/monitors?limit=250"
+private let page2Path = "/api/v1/monitors?limit=250&cursor=9"
 
 private func twoPages() throws -> StubTransport {
     router([
@@ -115,6 +115,30 @@ private func bigServer(count: Int) -> StubTransport {
         #expect(odd.name == "**bold** [click](https://evil.example/phish) <b>name</b>")
     }
 
+    @Test func oneBrokenMonitorDoesNotFailTheList() async throws {
+        let body = #"""
+        {"data": [
+            {"id": 1, "name": "Good", "monitor_type": "http", "status": "up"},
+            {"id": "x", "name": "Wrong id type"},
+            {"id": 3},
+            "not even an object",
+            {"id": 4, "name": "Also good", "monitor_type": "tcp", "status": "down"}
+        ], "next_cursor": null}
+        """#
+        let transport = router([page1Path: Data(body.utf8)])
+        let monitors = try await client(transport).monitors()
+        #expect(monitors.map(\.id) == [1, 4])
+        #expect(monitors.map(\.name) == ["Good", "Also good"])
+        #expect(monitors[1].status == .down)
+    }
+
+    @Test func aListThatIsNotAListIsStillUnexpected() async throws {
+        let transport = router([page1Path: Data(#"{"data": "nope", "next_cursor": null}"#.utf8)])
+        await #expect(throws: HedgerowError.unexpectedResponse) {
+            _ = try await client(transport).monitors()
+        }
+    }
+
     @Test func aSinglePageCanBeFetchedWithACursor() async throws {
         let transport = try twoPages()
         let page = try await client(transport).monitorsPage(cursor: "9")
@@ -161,23 +185,20 @@ private func bigServer(count: Int) -> StubTransport {
 }
 
 @Suite struct VoleManyMonitorsTests {
-    @Test func fiveHundredMonitorsComeInPagesOfAHundred() async throws {
+    @Test func fiveHundredMonitorsComeInPagesOf250() async throws {
         let transport = bigServer(count: 500)
         let monitors = try await client(transport).monitors()
 
         #expect(monitors.count == 500)
         #expect(Set(monitors.map(\.id)).count == 500)
-        #expect(transport.requests.count == 5)
+        #expect(transport.requests.count == 2)
         #expect(transport.requests.map(key) == [
-            "/api/v1/monitors?limit=100",
-            "/api/v1/monitors?limit=100&cursor=100",
-            "/api/v1/monitors?limit=100&cursor=200",
-            "/api/v1/monitors?limit=100&cursor=300",
-            "/api/v1/monitors?limit=100&cursor=400",
+            "/api/v1/monitors?limit=250",
+            "/api/v1/monitors?limit=250&cursor=250",
         ])
         // A page of the real shape stays far below the response limit.
         let page = try await transport.send(
-            URLRequest(url: URL(string: "https://vole.example.com/api/v1/monitors?limit=100")!), maxBytes: .max
+            URLRequest(url: URL(string: "https://vole.example.com/api/v1/monitors?limit=250")!), maxBytes: .max
         ).0
         #expect(page.count < HedgerowHTTP.maxResponseBytes / 4)
     }
@@ -199,6 +220,31 @@ private func bigServer(count: Int) -> StubTransport {
         let monitors = try await client(transport).monitors()
         #expect(monitors.count == 100)
         #expect(transport.requests.count == 1)
+    }
+}
+
+@Suite struct VoleUptimeDisplayTests {
+    @Test func neverRoundsUpToAHundred() {
+        #expect(VoleMonitorDetail.displayedUptime(99.996) == 99.99)
+        #expect(VoleMonitorDetail.displayedUptime(99.999) == 99.99)
+        #expect(VoleMonitorDetail.displayedUptime(99.9999) == 99.99)
+        #expect(VoleMonitorDetail.displayedUptime(0.004) == 0)
+    }
+
+    @Test func exactValuesStayAsTheyAre() {
+        #expect(VoleMonitorDetail.displayedUptime(100) == 100)
+        #expect(VoleMonitorDetail.displayedUptime(99.98) == 99.98)
+        #expect(VoleMonitorDetail.displayedUptime(99.99) == 99.99)
+        #expect(VoleMonitorDetail.displayedUptime(99.5) == 99.5)
+        #expect(VoleMonitorDetail.displayedUptime(0) == 0)
+        #expect(VoleMonitorDetail.displayedUptime(12.34) == 12.34)
+    }
+
+    @Test func outOfRangeAndNonNumbersAreHandled() {
+        #expect(VoleMonitorDetail.displayedUptime(100.5) == 100)
+        #expect(VoleMonitorDetail.displayedUptime(-3) == 0)
+        #expect(VoleMonitorDetail.displayedUptime(.nan) == nil)
+        #expect(VoleMonitorDetail.displayedUptime(.infinity) == nil)
     }
 }
 

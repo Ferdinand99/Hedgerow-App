@@ -98,6 +98,22 @@ private func bigServer(count: Int) -> StubTransport {
         #expect(projects.allSatisfy { $0.group == nil })
     }
 
+    @Test func aGroupListThatFailsInAnyWayLeavesTheProjectsUngrouped() async throws {
+        let projects = try fixture("kestrel-projects.json")
+        let failures: [(Int, Data)] = [
+            (500, Data()), (502, Data("bad gateway".utf8)), (401, Data()), (403, Data()),
+            (200, Data("not json".utf8)),
+        ]
+        for (status, body) in failures {
+            let transport = StubTransport { request in
+                request.url?.path == "/api/v1/project-groups" ? (body, status) : (projects, 200)
+            }
+            let loaded = try await client(transport).projects()
+            #expect(loaded.map(\.id) == [1, 2], "group list answered \(status)")
+            #expect(loaded.allSatisfy { $0.group == nil }, "group list answered \(status)")
+        }
+    }
+
     @Test func aGroupIdTheServerDidNotListLeavesTheProjectUngrouped() async throws {
         let transport = router([
             projectsPath: try fixture("kestrel-projects.json"),

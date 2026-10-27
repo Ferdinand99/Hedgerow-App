@@ -99,11 +99,12 @@ public struct VoleClient: ServiceClient {
 // MARK: - Lists and detail (Monitors tab)
 
 extension VoleClient {
-    /// Monitors per request. 100 keeps a page well under the 2 MiB limit and the first rows quick.
-    public static let pageSize = 100
+    /// Monitors per request. 250 is about 200 kB of JSON: far under the 2 MiB limit, few requests for
+    /// a big installation, and the first rows still quick.
+    public static let pageSize = 250
     /// Pages followed at most by `monitors()` (20 000 monitors), so a server that never ends its
     /// list cannot keep the app busy.
-    static let maxPages = 200
+    static let maxPages = 80
 
     /// One page of monitors (ordered by id), `nextCursor` set while there are more.
     /// `GET /api/v1/monitors?limit=&cursor=`

@@ -150,6 +150,15 @@ public struct VoleMonitorDetail: Sendable, Equatable {
     /// Newest first, at most `maxEvents`.
     public let events: [VoleEvent]
 
+    /// An uptime percentage as it is shown: rounded down to two decimals, never up, so 99.996 % does not
+    /// read "100 %" while a check has failed. Clamped to 0...100; `nil` for a value that is not a number.
+    public static func displayedUptime(_ percent: Double) -> Double? {
+        guard percent.isFinite else { return nil }
+        let clamped = min(max(percent, 0), 100)
+        // The tiny addition keeps 99.99 (stored a hair below) from dropping to 99.98.
+        return min((clamped * 100 + 1e-6).rounded(.down) / 100, 100)
+    }
+
     public init(
         monitor: VoleMonitor, description: String?, target: String?, rawMessage: String?,
         lastHeartbeat: VoleHeartbeat?, uptime24h: Double?, uptime30d: Double?, events: [VoleEvent]
@@ -305,6 +314,7 @@ struct VoleMonitorDTO: Decodable {
     }
 }
 
+/// One monitor the app cannot read is skipped; the others still show.
 struct VoleMonitorPageDTO: Decodable {
     let data: [VoleMonitorDTO]
     let nextCursor: String?
@@ -312,6 +322,12 @@ struct VoleMonitorPageDTO: Decodable {
     enum CodingKeys: String, CodingKey {
         case data
         case nextCursor = "next_cursor"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        data = try container.decode([Lossy<VoleMonitorDTO>].self, forKey: .data).compactMap(\.value)
+        nextCursor = try container.decodeIfPresent(String.self, forKey: .nextCursor)
     }
 }
 

@@ -652,6 +652,17 @@ struct WrenSchedulesDTO: Decodable {
             case autoTargets = "auto_targets"
         }
 
+        /// A list of targets that is not a list at all (or items that are broken) costs the targets,
+        /// not the server.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decode(Int.self, forKey: .id)
+            name = try? c.decodeIfPresent(String.self, forKey: .name)
+            mode = try? c.decodeIfPresent(String.self, forKey: .mode)
+            autoWindow = try? c.decodeIfPresent(Lossy<WrenWindowDTO>.self, forKey: .autoWindow)
+            autoTargets = try? c.decodeIfPresent([Lossy<TargetItem>].self, forKey: .autoTargets)
+        }
+
         var model: WrenServerWindow {
             let window = autoWindow?.value
             return WrenServerWindow(

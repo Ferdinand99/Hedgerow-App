@@ -123,10 +123,11 @@ extension KestrelClient {
     static let maxProjectPages = 20
 
     /// Every project with the project group it is in. The groups are only presentation: when the
-    /// server has no group list (an older Keen Kestrel), the projects come back ungrouped.
+    /// group list cannot be had (an older Keen Kestrel, or any failure of that one request), the
+    /// projects come back ungrouped.
     /// `GET /api/v1/projects?limit=500&cursor=` (all pages) and `GET /api/v1/project-groups`.
     public func projects() async throws -> [KestrelProject] {
-        async let groupList = projectGroups()
+        async let groupList = orFallback([]) { try await projectGroups() }
         let rows = try await projectRows()
         let groups = Dictionary(try await groupList.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         return rows.map { row in

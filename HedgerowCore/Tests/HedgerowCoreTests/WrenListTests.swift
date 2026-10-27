@@ -277,6 +277,22 @@ private func date(_ string: String) -> Date {
         #expect(!schedules.servers[1].openNow)
     }
 
+    @Test func brokenAutoTargetsCostTheTargetsNotTheServer() async throws {
+        let body = #"""
+        {"time_zone": "Europe/Oslo", "scheduled": [], "servers": [
+            {"id": 1, "name": "Items", "mode": "auto", "auto_targets": [{"name": "good"}, {"name": 5}, "x", null, {"id": 3}]},
+            {"id": 2, "name": "Not a list", "mode": "auto", "auto_targets": "oops"},
+            {"id": 3, "name": "Object", "mode": "auto", "auto_targets": {"name": "x"}},
+            {"id": 4, "name": "Null", "mode": "approve", "auto_targets": null}
+        ]}
+        """#
+        let transport = router(["/api/v1/schedules": Data(body.utf8)])
+        let schedules = try await client(transport).schedules()
+        #expect(schedules.servers.map(\.name) == ["Items", "Not a list", "Object", "Null"])
+        #expect(schedules.servers[0].autoTargets == ["good"])
+        #expect(schedules.servers[1...].allSatisfy { $0.autoTargets.isEmpty })
+    }
+
     @Test func anOlderServerWithoutSchedulesHasNone() async throws {
         let transport = StubTransport(status: 404)
         let schedules = try await client(transport).schedules()
