@@ -10,6 +10,10 @@ struct AddConnectionView: View {
     @State private var name = ""
     @State private var isWorking = false
     @State private var errorMessage: String?
+    @State private var task: Task<Void, Never>?
+
+    /// Longest a connect or a token check may take before the sheet says it can't reach the address.
+    static let deadline: Duration = .seconds(30)
 
     private var canConnect: Bool {
         !address.trimmingCharacters(in: .whitespaces).isEmpty
@@ -60,12 +64,16 @@ struct AddConnectionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .disabled(isWorking)
+                    // Allowed while working: it stops the request and stores nothing.
+                    Button("Cancel") {
+                        task?.cancel()
+                        dismiss()
+                    }
                 }
             }
-            // A half-finished connect must not be left running behind a closed sheet.
-            .interactiveDismissDisabled(isWorking)
+            // A half-finished connect must not be left running behind a closed sheet
+            // (Cancel, swipe down or anything else that removes it).
+            .onDisappear { task?.cancel() }
         }
     }
 
@@ -76,11 +84,18 @@ struct AddConnectionView: View {
         }
         errorMessage = nil
         isWorking = true
-        Task {
+        let service = store, secret = token, label = name
+        task = Task { @MainActor in
             defer { isWorking = false }
             do {
-                try await store.add(url: url, token: token, name: name)
+                // The whole connect (detect + check the token) gets one deadline, so a slow
+                // server can't trap the sheet.
+                try await withDeadline(Self.deadline) {
+                    try await service.add(url: url, token: secret, name: label)
+                }
                 dismiss()
+            } catch is CancellationError {
+                // Cancelled by the person: nothing to say.
             } catch {
                 errorMessage = userMessage(for: error)
             }
@@ -98,6 +113,7 @@ struct ReplaceTokenView: View {
     @State private var token = ""
     @State private var isWorking = false
     @State private var errorMessage: String?
+    @State private var task: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -133,23 +149,33 @@ struct ReplaceTokenView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .disabled(isWorking)
+                    // Allowed while working: it stops the request and stores nothing.
+                    Button("Cancel") {
+                        task?.cancel()
+                        dismiss()
+                    }
                 }
             }
-            .interactiveDismissDisabled(isWorking)
+            .onDisappear { task?.cancel() }
         }
     }
 
     private func save() {
         errorMessage = nil
         isWorking = true
-        Task {
+        let service = store, id = connection.id, secret = token
+        task = Task { @MainActor in
             defer { isWorking = false }
             do {
-                try await store.verifyToken(token, for: connection.id)
-                try store.replaceToken(connection.id, token: token)
+                try await withDeadline(AddConnectionView.deadline) {
+                    try await service.verifyToken(secret, for: id)
+                }
+                // Cancelled while the check was finishing: keep the old token.
+                try Task.checkCancellation()
+                try service.replaceToken(id, token: secret)
                 dismiss()
+            } catch is CancellationError {
+                // Cancelled by the person: nothing to say.
             } catch {
                 errorMessage = userMessage(for: error)
             }

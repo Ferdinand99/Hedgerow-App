@@ -674,6 +674,22 @@
         }
       }
     },
+    "Can't read the token (device locked?)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't read the token (device locked?)"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Får ikke lest tokenet (er enheten låst?)"
+          }
+        }
+      }
+    },
     "Cancel" : {
       "localizations" : {
         "en" : {

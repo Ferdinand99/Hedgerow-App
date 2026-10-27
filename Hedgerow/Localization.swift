@@ -64,6 +64,8 @@ extension CardProblem {
             return String(localized: "Can't reach it")
         case .tokenRejected:
             return String(localized: "The token doesn't work")
+        case .tokenUnreadable:
+            return String(localized: "Can't read the token (device locked?)")
         case .notHedgerow:
             return String(localized: "No Hedgerow app found here")
         case .unexpectedAnswer:
