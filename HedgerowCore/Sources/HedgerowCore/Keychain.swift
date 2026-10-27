@@ -45,18 +45,28 @@ public struct KeychainError: Error, Equatable, Sendable {
 /// never migrated to another device and never synchronised through iCloud.
 public struct KeychainVault: TokenVault {
     public let service: String
+    /// The Keychain access group the items live in (the app target's `keychain-access-groups`
+    /// entry, with the team prefix resolved), so widgets in the same group can read them.
+    /// `nil`: the app's default group, which is the first entry of its entitlement.
+    public let accessGroup: String?
 
-    public init(service: String = "tools.hedgerow.app.tokens") {
+    public init(service: String = "tools.hedgerow.app.tokens", accessGroup: String? = nil) {
         self.service = service
+        self.accessGroup = accessGroup
+    }
+
+    private func baseQuery() -> [String: Any] {
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrSynchronizable as String: false,
+        ]
+        if let accessGroup { query[kSecAttrAccessGroup as String] = accessGroup }
+        return query
     }
 
     private func query(for id: UUID) -> [String: Any] {
-        [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: id.uuidString,
-            kSecAttrSynchronizable as String: false,
-        ]
+        baseQuery().merging([kSecAttrAccount as String: id.uuidString]) { $1 }
     }
 
     public func save(_ token: String, for id: UUID) throws {
@@ -85,6 +95,15 @@ public struct KeychainVault: TokenVault {
 
     public func delete(for id: UUID) throws {
         let status = SecItemDelete(query(for: id) as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw KeychainError(status: status)
+        }
+    }
+
+    /// Removes every token this vault holds. Used when the connection list is reset, because
+    /// the ids that would let `delete(for:)` find the tokens are gone with the list.
+    public func deleteAll() throws {
+        let status = SecItemDelete(baseQuery() as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainError(status: status)
         }

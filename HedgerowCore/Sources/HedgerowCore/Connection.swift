@@ -28,7 +28,7 @@ public enum ServiceKind: String, Codable, Sendable, CaseIterable {
 
 /// One saved service: a name, where it lives and which product it is.
 /// The token is never part of this value; it lives in the Keychain.
-public struct Connection: Codable, Identifiable, Sendable {
+public struct Connection: Codable, Identifiable, Sendable, Equatable {
     public let id: UUID
     public var name: String
     public var baseURL: URL
@@ -81,10 +81,7 @@ public final class ConnectionStore {
     public func add(url: URL, token: String, name: String?) async throws -> Connection {
         // Before anything is sent: a token must never travel over plain http to a public host.
         guard isAllowedBaseURL(url) else { throw HedgerowError.insecureURL }
-        let token = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty,
-              !token.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
-        else { throw HedgerowError.unauthorized }
+        let token = try Self.cleaned(token: token)
 
         let kind = try await ServiceDetector(http: makeHTTP(nil)).detect(url)
         try await verify(token: token, kind: kind, at: url)
@@ -119,9 +116,28 @@ public final class ConnectionStore {
         guard connections.contains(where: { $0.id == id }) else {
             throw ConnectionStoreError.unknownConnection
         }
+        try vault.save(Self.cleaned(token: token), for: id)
+    }
+
+    /// Checks that `token` is accepted by the saved connection `id`, with the same viewer call
+    /// `add` makes, and stores nothing. For "replace token": verify first, then `replaceToken`.
+    public func verifyToken(_ token: String, for id: UUID) async throws {
+        guard let connection = connections.first(where: { $0.id == id }) else {
+            throw ConnectionStoreError.unknownConnection
+        }
+        // The saved address was allowed when it was added; check again before a token is sent.
+        guard isAllowedBaseURL(connection.baseURL) else { throw HedgerowError.insecureURL }
+        try await verify(token: Self.cleaned(token: token), kind: connection.kind, at: connection.baseURL)
+    }
+
+    /// Surrounding whitespace removed; empty or containing control characters is refused
+    /// (it could never be a valid header value).
+    private static func cleaned(token: String) throws -> String {
         let token = token.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty else { throw HedgerowError.unauthorized }
-        try vault.save(token, for: id)
+        guard !token.isEmpty,
+              !token.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
+        else { throw HedgerowError.unauthorized }
+        return token
     }
 
     /// The token saved for a connection, for building an authenticated client.

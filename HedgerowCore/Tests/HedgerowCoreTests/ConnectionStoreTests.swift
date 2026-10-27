@@ -223,6 +223,56 @@ import FoundationNetworking
         #expect(try Data(contentsOf: file) == before)
     }
 
+    @Test func verifyTokenChecksTheSavedConnectionAndStoresNothing() async throws {
+        let file = tempFile()
+        defer { cleanUp(file) }
+        let vault = InMemoryVault()
+        let transport = try stub()
+        let store = try makeStore(file: file, vault: vault, transport: transport)
+        let added = try await store.add(url: base, token: secret, name: nil)
+        let before = try Data(contentsOf: file)
+
+        try await store.verifyToken(" vv_new_token\n", for: added.id)
+
+        let last = try #require(transport.requests.last)
+        #expect(last.url?.path == "/api/v1/monitors")
+        #expect(last.value(forHTTPHeaderField: "Authorization") == "Bearer vv_new_token")
+        #expect(try vault.token(for: added.id) == secret)
+        #expect(try Data(contentsOf: file) == before)
+    }
+
+    @Test func verifyTokenRejectsATokenTheServerRefuses() async throws {
+        let file = tempFile()
+        defer { cleanUp(file) }
+        let vault = InMemoryVault()
+        let ok = try makeStore(file: file, vault: vault, transport: try stub())
+        let added = try await ok.add(url: base, token: secret, name: nil)
+
+        for (status, expected) in [(401, HedgerowError.unauthorized), (403, .forbidden)] {
+            let refusing = try makeStore(
+                file: file, vault: vault, transport: try stub(viewerStatus: status)
+            )
+            await #expect(throws: expected) {
+                try await refusing.verifyToken("vv_bad", for: added.id)
+            }
+        }
+        #expect(try vault.token(for: added.id) == secret)
+    }
+
+    @Test func verifyTokenForUnknownConnectionOrBlankTokenThrows() async throws {
+        let file = tempFile()
+        defer { cleanUp(file) }
+        let store = try makeStore(file: file, vault: InMemoryVault(), transport: try stub())
+        let added = try await store.add(url: base, token: secret, name: nil)
+
+        await #expect(throws: ConnectionStoreError.unknownConnection) {
+            try await store.verifyToken("vv_x", for: UUID())
+        }
+        await #expect(throws: HedgerowError.unauthorized) {
+            try await store.verifyToken("  ", for: added.id)
+        }
+    }
+
     @Test func replaceTokenWithBlankKeepsTheOldOne() async throws {
         let file = tempFile()
         defer { cleanUp(file) }
