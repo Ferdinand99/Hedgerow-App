@@ -46,10 +46,12 @@ public final class LoadTracker {
     /// outlive a reload, like the next page of a list.
     public var ticket: Ticket { Ticket(tracker: self, generation: generation) }
 
-    /// Whether a screen that appears now should load: nothing loaded yet, the last load failed, or
-    /// the data is `staleAfter` old.
+    /// Whether a screen that appears now should load: nothing loaded yet (including a first load
+    /// that failed), or the data is `staleAfter` old. A failed refresh over data the screen still
+    /// shows waits for the same age, so coming back to a screen doesn't throw away what was loaded
+    /// (a scrolled list, say); pull to refresh retries at once.
     public var isStale: Bool {
-        guard let lastLoaded, problem == nil else { return true }
+        guard let lastLoaded else { return true }
         let age = clock().timeIntervalSince(lastLoaded)
         return age < 0 || age >= Self.staleAfter
     }

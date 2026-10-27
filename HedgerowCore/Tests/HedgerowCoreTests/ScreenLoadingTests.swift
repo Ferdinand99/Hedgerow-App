@@ -88,7 +88,7 @@ private struct Boom: Error {}
         #expect(tracker.isStale)
     }
 
-    @Test func aFailureKeepsTheLastGoodTimeAndIsRetriedWhenAppearing() async {
+    @Test func aFailedRefreshKeepsTheDataUntilItIsOld() async {
         let clock = TestClock()
         let counter = Counter()
         let tracker = tracker(clock)
@@ -101,7 +101,23 @@ private struct Boom: Error {}
         #expect(tracker.lastLoaded == good)
         #expect(!tracker.isLoading)
 
-        // Not old yet, but the screen shows a problem: appearing tries again.
+        // The screen still shows the data from the last good load: appearing again leaves it
+        // (a scrolled list stays where it was) until that data is old.
+        await tracker.loadIfStale { _ in counter.loads += 1 }
+        #expect(counter.loads == 0)
+        #expect(tracker.problem == .unreachable)
+
+        clock.advance(LoadTracker.staleAfter)
+        await tracker.loadIfStale { _ in counter.loads += 1 }
+        #expect(counter.loads == 1)
+        #expect(tracker.problem == nil)
+    }
+
+    @Test func aFailedFirstLoadIsRetriedWhenAppearing() async {
+        let counter = Counter()
+        let tracker = tracker(TestClock())
+        await tracker.load { _ in throw HedgerowError.unreachable("down") }
+        #expect(tracker.isStale)
         await tracker.loadIfStale { _ in counter.loads += 1 }
         #expect(counter.loads == 1)
         #expect(tracker.problem == nil)
