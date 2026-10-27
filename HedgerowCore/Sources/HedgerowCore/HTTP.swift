@@ -11,6 +11,8 @@ public enum HedgerowError: Error, Equatable, Sendable {
     case unreachable(String)
     case badResponse(Int)
     case tooLarge
+    /// A 2xx answer whose content does not have the shape the app reads ("unexpected answer from the server").
+    case unexpectedResponse
     /// Plain `http` to an address outside the LAN, or a URL that cannot be used.
     case insecureURL
 }

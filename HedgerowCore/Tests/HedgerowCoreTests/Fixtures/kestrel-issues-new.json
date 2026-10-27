@@ -1,0 +1,31 @@
+{
+  "data": [
+    {
+      "id": 42,
+      "project_id": 1,
+      "title": "ValueError: invalid literal for int() with base 10: 'abc'",
+      "culprit": "shop.views in checkout",
+      "level": "error",
+      "platform": "python",
+      "status": "unresolved",
+      "substatus": "new",
+      "first_seen": "2026-10-23 08:00:00",
+      "last_seen": "2026-10-23 09:15:00",
+      "events": 17,
+      "users": 4,
+      "first_release": "shop@1.4.0",
+      "last_release": "shop@1.4.1",
+      "resolved_in_release": null,
+      "ignore_until": null,
+      "ignore_until_count": null,
+      "grouping_config": "kestrel:v2",
+      "unsymbolicated": false,
+      "path": "/projects/1/issues/42"
+    },
+    {"id": 41, "title": "KeyError: 'cart'", "status": "unresolved", "first_seen": "2026-10-23 03:30:00", "last_seen": "2026-10-23 04:00:00"},
+    {"id": 30, "title": "Old problem", "status": "unresolved", "first_seen": "2026-10-20 10:00:00", "last_seen": "2026-10-23 04:00:00"}
+  ],
+  "next_cursor": "50",
+  "total": 132,
+  "unknown_terms": []
+}
