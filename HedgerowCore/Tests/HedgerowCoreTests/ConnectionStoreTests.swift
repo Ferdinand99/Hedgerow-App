@@ -255,7 +255,7 @@ import FoundationNetworking
         #expect(transport.requests.last?.value(forHTTPHeaderField: "Authorization") == "Bearer \(secret)")
     }
 
-    @Test func nameDefaultsToTheHost() async throws {
+    @Test func nameDefaultsToTheProductNameThenAddsTheHost() async throws {
         let file = tempFile()
         defer { cleanUp(file) }
         let store = try makeStore(file: file, vault: InMemoryVault(), transport: try stub())
@@ -263,8 +263,39 @@ import FoundationNetworking
         let unnamed = try await store.add(url: base, token: secret, name: nil)
         let blank = try await store.add(url: base, token: secret, name: "   ")
 
-        #expect(unnamed.name == "vole.example.com")
-        #expect(blank.name == "vole.example.com")
+        #expect(unnamed.name == "Vigilant Vole")
+        #expect(blank.name == "Vigilant Vole (vole.example.com)")
+    }
+
+    @Test func aNameTheUserTypedIsKept() async throws {
+        let file = tempFile()
+        defer { cleanUp(file) }
+        let store = try makeStore(file: file, vault: InMemoryVault(), transport: try stub())
+
+        let named = try await store.add(url: base, token: secret, name: "  Home  ")
+        #expect(named.name == "Home")
+    }
+
+    @Test func defaultNameRule() {
+        let wren = URL(string: "https://wren.example.com")!
+        let other = URL(string: "https://wren2.example.com")!
+        #expect(Connection.defaultName(kind: .wren, url: wren, existing: []) == "Wise Wren")
+        // Another kind with its name does not matter.
+        let vole = Connection(name: "Vigilant Vole", baseURL: URL(string: "https://v.example.com")!, kind: .vole)
+        #expect(Connection.defaultName(kind: .wren, url: wren, existing: [vole]) == "Wise Wren")
+        // A second one of the same product gets the host.
+        let first = Connection(name: "Wise Wren", baseURL: wren, kind: .wren)
+        #expect(Connection.defaultName(kind: .wren, url: other, existing: [first]) == "Wise Wren (wren2.example.com)")
+        // An old connection named after its host shows the product name, so it counts as taken.
+        let legacy = Connection(name: "wren.example.com", baseURL: wren, kind: .wren)
+        #expect(Connection.defaultName(kind: .wren, url: other, existing: [legacy]) == "Wise Wren (wren2.example.com)")
+    }
+
+    @Test func displayNameShowsTheProductWhenTheNameIsTheHost() {
+        let url = URL(string: "https://Wren.example.com")!
+        #expect(Connection(name: "wren.example.com", baseURL: url, kind: .wren).displayName == "Wise Wren")
+        #expect(Connection(name: "Tower Wren", baseURL: url, kind: .wren).displayName == "Tower Wren")
+        #expect(Connection(name: "Wise Wren", baseURL: url, kind: .wren).displayName == "Wise Wren")
     }
 
     @Test func replaceTokenOverwritesOnlyTheVaultEntry() async throws {

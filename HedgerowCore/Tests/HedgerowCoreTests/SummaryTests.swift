@@ -357,3 +357,19 @@ private final class SlowTransport: HTTPTransport, @unchecked Sendable {
         #expect(makeClient(for: Connection(name: "a", baseURL: url, kind: .wren), token: "t") is WrenClient)
     }
 }
+
+@Suite struct JustNowTests {
+    private let base = Date(timeIntervalSince1970: 1_700_000_000)
+
+    @Test func recentOrFutureIsJustNow() {
+        #expect(isJustNow(base, now: base))
+        #expect(isJustNow(base, now: base.addingTimeInterval(9)))
+        // Clock skew: the fetch time is ahead of the phone's clock.
+        #expect(isJustNow(base.addingTimeInterval(3), now: base))
+    }
+
+    @Test func tenSecondsOrMoreIsNotJustNow() {
+        #expect(!isJustNow(base, now: base.addingTimeInterval(10)))
+        #expect(!isJustNow(base, now: base.addingTimeInterval(120)))
+    }
+}

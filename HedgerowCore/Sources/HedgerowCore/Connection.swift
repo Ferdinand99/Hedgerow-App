@@ -8,7 +8,7 @@ public enum ServiceKind: String, Codable, Sendable, CaseIterable {
     case wren
 
     /// The product name as it appears in the `info.title` of its OpenAPI document.
-    var productName: String {
+    public var productName: String {
         switch self {
         case .vole: "Vigilant Vole"
         case .kestrel: "Keen Kestrel"
@@ -39,6 +39,26 @@ public struct Connection: Codable, Identifiable, Sendable, Equatable {
         self.name = name
         self.baseURL = baseURL
         self.kind = kind
+    }
+
+    /// What a card or list shows as the title. A stored name equal to the host (the old default)
+    /// shows the product name instead, so older connections look right without a migration.
+    public var displayName: String {
+        let host = baseURL.host() ?? baseURL.absoluteString
+        if name.caseInsensitiveCompare(host) == .orderedSame
+            || name.caseInsensitiveCompare(baseURL.absoluteString) == .orderedSame {
+            return kind.productName
+        }
+        return name
+    }
+
+    /// The name for a new connection the person did not name: the product name, or, when
+    /// another connection already shows that name, the product name with the host,
+    /// "Wise Wren (wren.example.com)".
+    public static func defaultName(kind: ServiceKind, url: URL, existing: [Connection]) -> String {
+        let product = kind.productName
+        guard existing.contains(where: { $0.displayName == product }) else { return product }
+        return "\(product) (\(url.host() ?? url.absoluteString))"
     }
 }
 
@@ -93,7 +113,8 @@ public final class ConnectionStore {
 
         let trimmedName = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let connection = Connection(
-            name: trimmedName.isEmpty ? (url.host ?? url.absoluteString) : trimmedName,
+            name: trimmedName.isEmpty
+                ? Connection.defaultName(kind: kind, url: url, existing: connections) : trimmedName,
             baseURL: url,
             kind: kind
         )

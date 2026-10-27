@@ -13,7 +13,7 @@ struct ConnectionsView: View {
         List {
             ForEach(store.connections) { connection in
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(connection.name)
+                    Text(connection.displayName)
                     Text(verbatim: "\(connection.kind.displayName) · \(connection.baseURL.absoluteString)")
                         .font(.caption)
                         .foregroundStyle(.secondary)

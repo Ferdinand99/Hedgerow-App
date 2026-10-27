@@ -123,7 +123,7 @@ struct ReplaceTokenView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 } header: {
-                    Text(verbatim: "\(connection.name) · \(connection.kind.displayName)")
+                    Text(verbatim: "\(connection.displayName) · \(connection.kind.displayName)")
                 } footer: {
                     Text("Use a read-only token if you can. It is stored in this device's Keychain and only sent to the address of this service.")
                 }

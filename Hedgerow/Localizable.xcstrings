@@ -1447,6 +1447,22 @@
         }
       }
     },
+    "Updated just now" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updated just now"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oppdatert nå"
+          }
+        }
+      }
+    },
     "Use a read-only token if you can. It is stored in this device's Keychain and only sent to the address above." : {
       "localizations" : {
         "en" : {
