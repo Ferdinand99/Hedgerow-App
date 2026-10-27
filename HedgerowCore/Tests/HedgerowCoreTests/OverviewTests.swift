@@ -44,6 +44,14 @@ private final class Script: @unchecked Sendable {
     var seenTokens: [String?] { lock.withLock { tokens } }
 }
 
+/// A vault whose reads fail, like a locked device's Keychain.
+private struct UnreadableVault: TokenVault {
+    struct Failure: Error {}
+    func save(_ token: String, for id: UUID) throws {}
+    func token(for id: UUID) throws -> String? { throw Failure() }
+    func delete(for id: UUID) throws {}
+}
+
 private func summary(_ kind: ServiceKind, _ health: Health, at date: Date = Date(timeIntervalSince1970: 1_700_000_000)) -> ServiceSummary {
     ServiceSummary(
         kind: kind, health: health, headline: SummaryLine("%lld down", .number(0)), details: [], fetchedAt: date
@@ -180,6 +188,29 @@ private func summary(_ kind: ServiceKind, _ health: Health, at date: Date = Date
         await model.refresh()
 
         #expect(model.cards[0].phase == .failed(.tokenRejected, lastGood: nil))
+    }
+
+    @Test func unreadableTokenIsNotARejectedToken() async throws {
+        defer { cleanUp() }
+        let script = Script()
+        let (_, _, connections) = try makeFixture(script: script)
+        let locked = try ConnectionStore(fileURL: file, vault: UnreadableVault())
+        let model = OverviewModel(store: locked) { connection, token in
+            script.client(for: connection, token: token)
+        }
+        for connection in connections {
+            script.set(.summary(summary(connection.kind, .ok)), for: connection.id)
+        }
+
+        await model.refresh()
+
+        #expect(model.cards.map(\.phase) == Array(repeating: .failed(.tokenUnreadable, lastGood: nil), count: 3))
+        #expect(script.seenTokens.isEmpty)
+    }
+
+    @Test func refusedRedirectToASignInPageIsNotHedgerow() {
+        // The HTTP layer reports a refused redirect as `.notHedgerow`; the card says the same.
+        #expect(CardProblem(HedgerowError.notHedgerow) == .notHedgerow)
     }
 
     @Test func removedConnectionLosesItsCard() async throws {

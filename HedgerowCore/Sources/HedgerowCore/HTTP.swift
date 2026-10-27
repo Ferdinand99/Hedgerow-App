@@ -261,6 +261,9 @@ public struct HedgerowHTTP: Sendable {
         if data.count > Self.maxResponseBytes { throw HedgerowError.tooLarge }
         switch response.statusCode {
         case 200..<300: return (data, response.statusCode)
+        // Only a redirect the rules refused gets here (to another host or scheme, as a gateway's
+        // sign-in page does): whatever answers is not the Hedgerow product that was asked for.
+        case 300..<400: throw HedgerowError.notHedgerow
         case 401: throw HedgerowError.unauthorized
         case 403: throw HedgerowError.forbidden
         default: throw HedgerowError.badResponse(response.statusCode)

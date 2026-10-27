@@ -20,13 +20,21 @@ import FoundationNetworking
         try? FileManager.default.removeItem(at: file.deletingLastPathComponent())
     }
 
-    /// Answers the OpenAPI document for `product` and `viewerStatus` for the viewer endpoint.
+    /// Like a real vole-kit server: the OpenAPI document and the viewer endpoint both need a
+    /// signed-in user, so everything answers 401 unless the `Authorization: Bearer` header carries
+    /// `accepted`. With it, the OpenAPI document is `product` and the viewer endpoint answers
+    /// `viewerStatus` / `viewerBody`.
     private func stub(
-        product: String = "openapi-vole.json", viewerStatus: Int = 200, viewerBody: String = "[]"
+        product: String = "openapi-vole.json", viewerStatus: Int = 200, viewerBody: String = "[]",
+        accepted: String? = nil
     ) throws -> StubTransport {
         let document = try fixture(product)
         let viewer = Data(viewerBody.utf8)
+        let accepted = accepted ?? secret
         return StubTransport { request in
+            guard request.value(forHTTPHeaderField: "Authorization") == "Bearer \(accepted)" else {
+                return (Data(#"{"error":"unauthorized"}"#.utf8), 401)
+            }
             if request.url?.path == "/api/v1/openapi.json" { return (document, 200) }
             return (viewer, viewerStatus)
         }
@@ -60,11 +68,11 @@ import FoundationNetworking
         #expect(!bytes.isEmpty)
         #expect(bytes.range(of: Data(secret.utf8)) == nil)
 
-        // Detection is anonymous; the viewer call carries the token.
+        // Both the detection and the viewer call carry the token (the server needs it for both).
         let requests = transport.requests
         #expect(requests.count == 2)
         #expect(requests[0].url?.path == "/api/v1/openapi.json")
-        #expect(requests[0].value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(requests[0].value(forHTTPHeaderField: "Authorization") == "Bearer \(secret)")
         #expect(requests[1].url?.path == "/api/v1/monitors")
         #expect(requests[1].value(forHTTPHeaderField: "Authorization") == "Bearer \(secret)")
 
@@ -117,6 +125,56 @@ import FoundationNetworking
         await #expect(throws: expected) {
             try await store.add(url: base, token: secret, name: nil)
         }
+
+        #expect(store.connections.isEmpty)
+        #expect(vault.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+    }
+
+    @Test func addWithAWrongTokenIsUnauthorizedAtDetection() async throws {
+        let file = tempFile()
+        defer { cleanUp(file) }
+        let vault = InMemoryVault()
+        let transport = try stub(accepted: "some-other-token")
+        let store = try makeStore(file: file, vault: vault, transport: transport)
+
+        await #expect(throws: HedgerowError.unauthorized) {
+            try await store.add(url: base, token: secret, name: nil)
+        }
+
+        // Detection already said no; the viewer call was never made.
+        #expect(transport.requests.map { $0.url?.path } == ["/api/v1/openapi.json"])
+        #expect(store.connections.isEmpty)
+        #expect(vault.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+    }
+
+    @Test func addWithATokenThatMayNotReadTheApiIsForbiddenAtDetection() async throws {
+        let file = tempFile()
+        defer { cleanUp(file) }
+        let vault = InMemoryVault()
+        let transport = StubTransport(status: 403, body: Data(#"{"error":"forbidden"}"#.utf8))
+        let store = try makeStore(file: file, vault: vault, transport: transport)
+
+        await #expect(throws: HedgerowError.forbidden) {
+            try await store.add(url: base, token: secret, name: nil)
+        }
+        #expect(store.connections.isEmpty)
+        #expect(vault.isEmpty)
+    }
+
+    @Test func addThatIsCancelledStoresNothing() async throws {
+        let file = tempFile()
+        defer { cleanUp(file) }
+        let vault = InMemoryVault()
+        let store = try makeStore(file: file, vault: vault, transport: try stub())
+        let url = base, token = secret
+
+        let task = Task { @MainActor in
+            try await store.add(url: url, token: token, name: nil)
+        }
+        task.cancel()
+        _ = try? await task.value
 
         #expect(store.connections.isEmpty)
         #expect(vault.isEmpty)
@@ -227,11 +285,13 @@ import FoundationNetworking
         let file = tempFile()
         defer { cleanUp(file) }
         let vault = InMemoryVault()
-        let transport = try stub()
-        let store = try makeStore(file: file, vault: vault, transport: transport)
-        let added = try await store.add(url: base, token: secret, name: nil)
+        let first = try makeStore(file: file, vault: vault, transport: try stub())
+        let added = try await first.add(url: base, token: secret, name: nil)
         let before = try Data(contentsOf: file)
 
+        // The server now knows the new token.
+        let transport = try stub(accepted: "vv_new_token")
+        let store = try makeStore(file: file, vault: vault, transport: transport)
         try await store.verifyToken(" vv_new_token\n", for: added.id)
 
         let last = try #require(transport.requests.last)
@@ -250,7 +310,7 @@ import FoundationNetworking
 
         for (status, expected) in [(401, HedgerowError.unauthorized), (403, .forbidden)] {
             let refusing = try makeStore(
-                file: file, vault: vault, transport: try stub(viewerStatus: status)
+                file: file, vault: vault, transport: try stub(viewerStatus: status, accepted: "vv_bad")
             )
             await #expect(throws: expected) {
                 try await refusing.verifyToken("vv_bad", for: added.id)

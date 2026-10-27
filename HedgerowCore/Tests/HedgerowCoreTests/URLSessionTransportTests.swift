@@ -90,7 +90,8 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
                 proto.respond(status: 200, body: Data("{}".utf8))
             }
         }
-        await #expect(throws: HedgerowError.badResponse(302)) {
+        // The refused redirect is a gateway's answer, not Hedgerow's.
+        await #expect(throws: HedgerowError.notHedgerow) {
             try await http().getData("/api/v1/x", from: base)
         }
         #expect(!StubURLProtocol.hosts.contains("evil.example.net"))

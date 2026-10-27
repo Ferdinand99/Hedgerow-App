@@ -75,16 +75,21 @@ public final class ConnectionStore {
         }
     }
 
-    /// Detects the product at `url`, checks that `token` is accepted there, and only then
-    /// stores the token in the vault and the connection in the list.
+    /// Detects the product at `url` (the OpenAPI document needs a signed-in user, so the token is
+    /// sent from the first request on), checks that `token` is accepted by a viewer call, and only
+    /// then stores the token in the vault and the connection in the list. A missing or wrong token
+    /// is `.unauthorized`, a token without access is `.forbidden`, a 200 that is not a Hedgerow
+    /// document is `.notHedgerow`.
     @discardableResult
     public func add(url: URL, token: String, name: String?) async throws -> Connection {
         // Before anything is sent: a token must never travel over plain http to a public host.
         guard isAllowedBaseURL(url) else { throw HedgerowError.insecureURL }
         let token = try Self.cleaned(token: token)
 
-        let kind = try await ServiceDetector(http: makeHTTP(nil)).detect(url)
+        let kind = try await ServiceDetector(http: makeHTTP(token)).detect(url)
         try await verify(token: token, kind: kind, at: url)
+        // A cancelled or timed-out Add stores nothing: nothing suspends between here and the saves.
+        try Task.checkCancellation()
 
         let trimmedName = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let connection = Connection(
@@ -120,7 +125,8 @@ public final class ConnectionStore {
     }
 
     /// Checks that `token` is accepted by the saved connection `id`, with the same viewer call
-    /// `add` makes, and stores nothing. For "replace token": verify first, then `replaceToken`.
+    /// `add` makes (401 is `.unauthorized`, 403 `.forbidden`, a redirect or non-JSON answer
+    /// `.notHedgerow`, as in `add`), and stores nothing. For "replace token": verify first, then `replaceToken`.
     public func verifyToken(_ token: String, for id: UUID) async throws {
         guard let connection = connections.first(where: { $0.id == id }) else {
             throw ConnectionStoreError.unknownConnection

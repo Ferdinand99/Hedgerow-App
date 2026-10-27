@@ -8,8 +8,12 @@ public enum CardProblem: Error, Sendable, Equatable {
     case unreachable
     /// 401/403, or no token in the Keychain: "The token doesn't work", with a way to replace it.
     case tokenRejected
-    /// The address now answers with something that is not (this) Hedgerow product.
+    /// The address now answers with something that is not (this) Hedgerow product, for example
+    /// a gateway's sign-in page it redirects to.
     case notHedgerow
+    /// The token could not be read from the Keychain (device locked, Keychain error). Not the
+    /// same as a token the server refuses.
+    case tokenUnreadable
     /// An answer the app cannot read (wrong shape, too large, unexpected status).
     case unexpectedAnswer
     /// The saved address is not allowed (plain http to a public host).
@@ -141,7 +145,14 @@ public final class OverviewModel {
     private func fetchAll() async {
         var jobs: [Job] = []
         for connection in store.connections {
-            let token = try? store.token(for: connection.id)
+            let token: String?
+            do {
+                token = try store.token(for: connection.id)
+            } catch {
+                // The Keychain could not be read (e.g. the device is locked): not a rejected token.
+                apply(.failure(.tokenUnreadable), to: connection.id)
+                continue
+            }
             // No token in the Keychain is the same to the user as a token that doesn't work.
             guard let token else {
                 apply(.failure(.tokenRejected), to: connection.id)
