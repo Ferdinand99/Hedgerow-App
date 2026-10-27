@@ -4,6 +4,7 @@ options:
   deploymentTarget:
     iOS: "18.0"
   createIntermediateGroups: true
+  developmentLanguage: en
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -22,6 +23,33 @@ targets:
       - Hedgerow
     dependencies:
       - package: HedgerowCore
+    info:
+      # Merged with the keys Xcode generates from the INFOPLIST_KEY_ settings below.
+      path: Config/Hedgerow-Info.plist
+      properties:
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, nb]
+        # HedgerowCore only lets a token travel over https, or plain http to a LAN host
+        # (isAllowedBaseURL: loopback, RFC 1918, link-local, .local/.lan/.home.arpa/.internal,
+        # Tailscale 100.64.0.0/10 and .ts.net). ATS cannot express that list: it would still
+        # block http to .lan, .ts.net, .home.arpa, .internal and CGNAT hosts. So ATS is opened
+        # here and the app's own rule is the gate; HedgerowHTTP checks it before every request
+        # and refuses redirects to another host.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: Hedgerow connects to your own servers on your local network.
+        # The Keychain access group with the team prefix resolved at build time (read by AppStorage.swift).
+        HedgerowKeychainAccessGroup: $(AppIdentifierPrefix)tools.hedgerow.app
+    entitlements:
+      path: Config/Hedgerow.entitlements
+      properties:
+        # Shared with the phase 5 widgets: the connection list lives in the App Group container...
+        com.apple.security.application-groups:
+          - group.tools.hedgerow.app
+        # ...and the tokens in this Keychain access group.
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)tools.hedgerow.app
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: tools.hedgerow.app
