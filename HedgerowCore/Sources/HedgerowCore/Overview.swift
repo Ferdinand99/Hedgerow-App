@@ -19,7 +19,9 @@ public enum CardProblem: Error, Sendable, Equatable {
     /// The saved address is not allowed (plain http to a public host).
     case insecure
 
-    init(_ error: any Error) {
+    /// The problem a failed read of a service means. Tabs use it to show their own errors in the
+    /// same words as the Overview.
+    public init(_ error: any Error) {
         switch error as? HedgerowError {
         case .unauthorized?, .forbidden?: self = .tokenRejected
         case .notHedgerow?: self = .notHedgerow

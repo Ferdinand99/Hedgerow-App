@@ -95,3 +95,81 @@ public struct VoleClient: ServiceClient {
         return ServiceSummary(kind: .vole, health: healthValue, headline: headline, details: details, fetchedAt: now())
     }
 }
+
+// MARK: - Lists and detail (Monitors tab)
+
+extension VoleClient {
+    /// Monitors per request. 100 keeps a page well under the 2 MiB limit and the first rows quick.
+    public static let pageSize = 100
+    /// Pages followed at most by `monitors()` (20 000 monitors), so a server that never ends its
+    /// list cannot keep the app busy.
+    static let maxPages = 200
+
+    /// One page of monitors (ordered by id), `nextCursor` set while there are more.
+    /// `GET /api/v1/monitors?limit=&cursor=`
+    public func monitorsPage(cursor: String? = nil, limit: Int = VoleClient.pageSize) async throws -> VoleMonitorPage {
+        var path = "/api/v1/monitors?limit=\(min(max(limit, 1), 500))"
+        if let cursor { path += "&cursor=" + Self.queryEncoded(cursor) }
+        let page = try await http.getDecoded(VoleMonitorPageDTO.self, path, from: baseURL)
+        return VoleMonitorPage(monitors: page.data.map(\.model), nextCursor: page.nextCursor)
+    }
+
+    /// Every monitor, page by page, each with the name of its group filled in. `progress` gets
+    /// everything loaded so far after each page, so a screen can show the first rows at once.
+    public func monitors(
+        progress: (@MainActor @Sendable (_ soFar: [VoleMonitor]) -> Void)? = nil
+    ) async throws -> [VoleMonitor] {
+        var all: [VoleMonitor] = []
+        var cursor: String?
+        var seen: Set<String> = []
+        for _ in 0..<Self.maxPages {
+            let page = try await monitorsPage(cursor: cursor)
+            all += page.monitors
+            if let progress, page.nextCursor != nil { await progress(VoleMonitor.resolvingGroups(all)) }
+            guard let next = page.nextCursor else { break }
+            // A cursor that comes back means the server is going in circles.
+            guard seen.insert(next).inserted else { throw HedgerowError.unexpectedResponse }
+            cursor = next
+        }
+        return VoleMonitor.resolvingGroups(all)
+    }
+
+    /// One monitor with its latest check, uptime (24 h and 30 d) and up to 20 recent events.
+    /// Four requests, made together:
+    /// `/monitors/{id}`, `/monitors/{id}/heartbeats?limit=1`, `/monitors/{id}/uptime?days=30`,
+    /// `/monitors/{id}/events?limit=20`.
+    public func monitor(id: Int) async throws -> VoleMonitorDetail {
+        let base = "/api/v1/monitors/\(id)"
+        async let monitor = http.getDecoded(VoleMonitorDTO.self, base, from: baseURL)
+        async let heartbeats = http.getDecoded(VoleHeartbeatListDTO.self, base + "/heartbeats?limit=1", from: baseURL)
+        async let uptime = http.getDecoded(VoleUptimeDTO.self, base + "/uptime?days=30", from: baseURL)
+        async let events = http.getDecoded(
+            VoleEventListDTO.self, base + "/events?limit=\(VoleMonitorDetail.maxEvents)", from: baseURL
+        )
+        let dto = try await monitor
+        let heartbeat = try await heartbeats.data.first?.model
+        let up = try await uptime
+        let recent = try await events
+
+        var model = dto.model
+        model.responseMs = heartbeat?.responseMs
+        return VoleMonitorDetail(
+            monitor: model,
+            description: dto.description.flatMap { $0.isEmpty ? nil : $0 },
+            target: dto.target.flatMap { $0.isEmpty ? nil : $0 },
+            rawMessage: dto.rawMessage,
+            lastHeartbeat: heartbeat,
+            uptime24h: up.uptime24hPct,
+            uptime30d: up.uptimePct,
+            events: Array(recent.data.prefix(VoleMonitorDetail.maxEvents)).map(\.model)
+        )
+    }
+
+    /// Everything except unreserved characters is escaped, so a cursor from the server can never
+    /// add a parameter of its own.
+    static func queryEncoded(_ value: String) -> String {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+    }
+}

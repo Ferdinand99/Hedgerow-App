@@ -31,7 +31,7 @@ struct RootTabView: View {
             }
             Tab("Monitors", systemImage: "waveform.path.ecg", value: AppTab.monitors) {
                 ServiceTab(kind: .vole, title: "Monitors", store: store, model: model, picks: picks) { context in
-                    ServiceTabPlaceholder(context: context, model: model)
+                    MonitorsView(context: context, store: store)
                 }
             }
             Tab("Issues", systemImage: "ladybug", value: AppTab.issues) {
