@@ -19,9 +19,17 @@ enum FixtureError: Error {
 final class StubTransport: HTTPTransport, @unchecked Sendable {
     private let lock = NSLock()
     private var recorded: [URLRequest] = []
-    private let handler: @Sendable (URLRequest) throws -> (Data, Int)
+    private let handler: @Sendable (URLRequest) throws -> (Data, Int, [String: String])
 
     init(_ handler: @escaping @Sendable (URLRequest) throws -> (Data, Int)) {
+        self.handler = { request in
+            let (data, status) = try handler(request)
+            return (data, status, [:])
+        }
+    }
+
+    /// For tests that read response headers (`Retry-After`).
+    init(withHeaders handler: @escaping @Sendable (URLRequest) throws -> (Data, Int, [String: String])) {
         self.handler = handler
     }
 
@@ -40,8 +48,8 @@ final class StubTransport: HTTPTransport, @unchecked Sendable {
 
     func send(_ request: URLRequest, maxBytes: Int) async throws -> (Data, HTTPURLResponse) {
         record(request)
-        let (data, status) = try handler(request)
-        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil)!
+        let (data, status, headers) = try handler(request)
+        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)!
         return (data, response)
     }
 }

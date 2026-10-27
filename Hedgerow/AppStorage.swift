@@ -28,6 +28,12 @@ enum AppStorageLocation {
         KeychainVault(accessGroup: keychainAccessGroup)
     }
 
+    /// The Postal Pigeon registration (device id and manage key): same access group, own item,
+    /// this device only.
+    static func makePigeonStore() -> KeychainPigeonStore {
+        KeychainPigeonStore(accessGroup: keychainAccessGroup)
+    }
+
     /// The Keychain access group with the team prefix resolved, read from the Info.plist value
     /// `$(AppIdentifierPrefix)tools.hedgerow.app`. `nil` without a team prefix (unsigned builds),
     /// where naming a group would make every Keychain call fail; the default group is used then.

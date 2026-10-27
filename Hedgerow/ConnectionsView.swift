@@ -26,16 +26,17 @@ struct ConnectionsView: View {
                             .tint(.blue)
                     }
                 }
-            }
-        }
-        .overlay {
-            if store.connections.isEmpty {
-                ContentUnavailableView {
-                    Label("No connections", systemImage: "link")
-                } actions: {
-                    Button("Add a service") { showingAdd = true }
+                // Inside the list rather than over it, so the sections below stay reachable.
+                if store.connections.isEmpty {
+                    ContentUnavailableView {
+                        Label("No connections", systemImage: "link")
+                    } actions: {
+                        Button("Add a service") { showingAdd = true }
+                    }
                 }
             }
+
+            NotificationsSection()
         }
         .navigationTitle("Settings")
         .toolbar {
