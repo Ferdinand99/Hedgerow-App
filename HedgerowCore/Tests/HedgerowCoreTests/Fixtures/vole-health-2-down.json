@@ -1,0 +1,1 @@
+{"status": "ok", "version": "0.14.0", "uptime_seconds": 86400, "monitors": {"total": 40, "by_status": {"up": 36, "down": 2, "paused": 2}}, "status_pages": 1, "agents": 2}

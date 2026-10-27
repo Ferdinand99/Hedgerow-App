@@ -1,0 +1,9 @@
+{
+  "data": [
+    {"id": 30, "title": "Old problem", "status": "unresolved", "first_seen": "2026-10-20 10:00:00", "last_seen": "2026-10-23 04:00:00"},
+    {"id": 29, "title": "Older problem", "status": "unresolved", "first_seen": "2026-10-19 10:00:00", "last_seen": "2026-10-22 04:00:00"}
+  ],
+  "next_cursor": null,
+  "total": 2,
+  "unknown_terms": []
+}

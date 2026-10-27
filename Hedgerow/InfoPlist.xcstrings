@@ -1,0 +1,22 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSLocalNetworkUsageDescription" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hedgerow connects to your own servers on your local network."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hedgerow kobler til dine egne servere på det lokale nettverket."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

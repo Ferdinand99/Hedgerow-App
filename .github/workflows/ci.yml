@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  # Pushes to main and to feature branches (also without a PR), plus every pull request.
+  # The event name is part of the concurrency group, so a push run and a pull_request run
+  # for the same branch never cancel each other (a PR check could otherwise end "cancelled").
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  core-tests:
+    name: HedgerowCore tests (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    defaults:
+      run:
+        working-directory: HedgerowCore
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run tests
+        run: swift test
+
+  app-build:
+    name: Hedgerow app build (iOS Simulator)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: HedgerowCore tests (macOS)
+        working-directory: HedgerowCore
+        run: swift test
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build
+        run: xcodebuild build -scheme Hedgerow -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
