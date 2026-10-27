@@ -14,7 +14,8 @@ let package = Package(
         .target(name: "HedgerowCore"),
         .testTarget(
             name: "HedgerowCoreTests",
-            dependencies: ["HedgerowCore"]
+            dependencies: ["HedgerowCore"],
+            resources: [.copy("Fixtures")]
         ),
     ]
 )

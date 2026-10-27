@@ -1,0 +1,50 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Wise Wren API",
+    "version": "0.3.0",
+    "description": "REST API for Wise Wren. Authenticate with `Authorization: Bearer ww_…`. Reads need any token; writes need a token with write access (a session cookie is never enough) of an editor or, where marked, an admin."
+  },
+  "servers": [{ "url": "https://wren.example.com" }],
+  "tags": [{ "name": "Hosts" }, { "name": "Containers" }],
+  "paths": {
+    "/api/v1/hosts": {
+      "get": {
+        "tags": ["Hosts"],
+        "summary": "List hosts",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/containers": {
+      "get": {
+        "tags": ["Containers"],
+        "summary": "List containers",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "description": "API token (ww_…)" },
+      "sessionCookie": { "type": "apiKey", "in": "cookie", "name": "ww_session" }
+    },
+    "responses": {
+      "Error": {
+        "description": "Error",
+        "content": {
+          "application/json": {
+            "example": { "error": { "code": "unauthorized", "message": "Missing or invalid token", "fields": [] } }
+          }
+        }
+      }
+    }
+  }
+}
