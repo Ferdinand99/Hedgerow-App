@@ -112,3 +112,91 @@ public struct KestrelClient: ServiceClient {
         return ServiceSummary(kind: .kestrel, health: health, headline: headline, details: details, fetchedAt: current)
     }
 }
+
+// MARK: - Lists and detail (Issues tab)
+
+extension KestrelClient {
+    /// Issues per request. 100 keeps a page far below the 2 MiB limit and the first rows quick.
+    public static let issuePageSize = 100
+    /// Projects per request (the server's largest page); a few pages cover any installation.
+    static let projectPageSize = 500
+    static let maxProjectPages = 20
+
+    /// Every project with the project group it is in. The groups are only presentation: when the
+    /// server has no group list (an older Keen Kestrel), the projects come back ungrouped.
+    /// `GET /api/v1/projects?limit=500&cursor=` (all pages) and `GET /api/v1/project-groups`.
+    public func projects() async throws -> [KestrelProject] {
+        async let groupList = projectGroups()
+        let rows = try await projectRows()
+        let groups = Dictionary(try await groupList.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return rows.map { row in
+            KestrelProject(
+                id: row.id, name: row.name, platform: row.platform ?? "other",
+                group: row.groupId.flatMap { groups[$0] }
+            )
+        }
+    }
+
+    /// The project groups, in the project list's order. `[]` if the server does not know groups.
+    public func projectGroups() async throws -> [KestrelProjectGroup] {
+        do {
+            let list = try await http.getDecoded(
+                KestrelListDTO<KestrelProjectGroupDTO>.self, "/api/v1/project-groups", from: baseURL
+            )
+            return list.data.map(\.model)
+        } catch HedgerowError.badResponse(404) {
+            return []
+        }
+    }
+
+    private func projectRows() async throws -> [KestrelProjectDTO] {
+        var all: [KestrelProjectDTO] = []
+        var cursor: String?
+        var seen: Set<String> = []
+        for _ in 0..<Self.maxProjectPages {
+            var path = "/api/v1/projects?limit=\(Self.projectPageSize)"
+            if let cursor { path += "&cursor=" + VoleClient.queryEncoded(cursor) }
+            let page = try await http.getDecoded(KestrelListDTO<KestrelProjectDTO>.self, path, from: baseURL)
+            all += page.data
+            guard let next = page.nextCursor else { break }
+            // A cursor that comes back means the server is going in circles.
+            guard seen.insert(next).inserted else { throw HedgerowError.unexpectedResponse }
+            cursor = next
+        }
+        return all
+    }
+
+    /// One page of a project's unresolved issues, most recently active first.
+    /// `GET /api/v1/projects/{id}/issues?status=unresolved&sort=last_seen&limit=&cursor=`
+    /// (the cursor is the server's `next_cursor`; `total` is all matches).
+    public func issuesPage(
+        projectId: Int, cursor: String? = nil, limit: Int = KestrelClient.issuePageSize
+    ) async throws -> KestrelIssuePage {
+        var path = "/api/v1/projects/\(projectId)/issues?status=unresolved&sort=last_seen&limit=\(min(max(limit, 1), 500))"
+        if let cursor { path += "&cursor=" + VoleClient.queryEncoded(cursor) }
+        let page = try await http.getDecoded(KestrelListDTO<KestrelIssueDTO>.self, path, from: baseURL)
+        return KestrelIssuePage(issues: page.data.map(\.model), nextCursor: page.nextCursor, total: page.total)
+    }
+
+    /// Unresolved issues of a project, newest activity first, one page at a time: ask again with
+    /// `next` until it is `nil`.
+    public func issues(projectId: Int, cursor: String? = nil) async throws -> (issues: [KestrelIssue], next: String?) {
+        let page = try await issuesPage(projectId: projectId, cursor: cursor)
+        return (page.issues, page.nextCursor)
+    }
+
+    /// How many unresolved issues a project has: one request for one issue, read from `total`.
+    public func unresolvedCount(projectId: Int) async throws -> Int? {
+        try await issuesPage(projectId: projectId, limit: 1).total
+    }
+
+    /// The issue's newest event that still has its details: level, release, environment, stack
+    /// and tags. `HedgerowError.badResponse(404)` when no event of the issue has details left.
+    /// `GET /api/v1/projects/{id}/issues/{issue_id}/events/latest`
+    public func latestEvent(projectId: Int, issueId: Int) async throws -> KestrelEvent {
+        let dto = try await http.getDecoded(
+            KestrelEventDTO.self, "/api/v1/projects/\(projectId)/issues/\(issueId)/events/latest", from: baseURL
+        )
+        return dto.model
+    }
+}

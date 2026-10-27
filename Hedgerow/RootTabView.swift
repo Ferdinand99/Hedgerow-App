@@ -36,7 +36,7 @@ struct RootTabView: View {
             }
             Tab("Issues", systemImage: "ladybug", value: AppTab.issues) {
                 ServiceTab(kind: .kestrel, title: "Issues", store: store, model: model, picks: picks) { context in
-                    ServiceTabPlaceholder(context: context, model: model)
+                    IssuesView(context: context, store: store)
                 }
             }
             Tab("Updates", systemImage: "arrow.triangle.2.circlepath", value: AppTab.updates) {
