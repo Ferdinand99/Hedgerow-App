@@ -34,6 +34,12 @@ public struct PigeonRegistration: Codable, Sendable, Equatable {
     }
 }
 
+// Printing a registration or a record (a log line, a test failure) shows the device id only.
+extension PigeonRegistration: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String { "PigeonRegistration(deviceId: \(deviceId), manageKey: <hidden>)" }
+    public var debugDescription: String { description }
+}
+
 public enum PigeonError: Error, Equatable, Sendable {
     /// `404`: the relay has no such device any more. Register again.
     case gone
@@ -222,6 +228,11 @@ public struct PigeonRecord: Codable, Sendable, Equatable {
         self.token = token
         self.lastSent = lastSent
     }
+}
+
+extension PigeonRecord: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String { "PigeonRecord(\(registration), token: <hidden>, lastSent: \(lastSent))" }
+    public var debugDescription: String { description }
 }
 
 public protocol PigeonStore: Sendable {

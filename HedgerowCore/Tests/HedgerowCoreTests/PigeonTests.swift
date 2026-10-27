@@ -513,3 +513,13 @@ private func registrar(
         #expect(await subject.storedDeviceId() == "hrd_new1")
     }
 }
+
+@Test func printingARegistrationOrRecordHidesTheSecrets() {
+    let registration = PigeonRegistration(deviceId: "hrd_abc", manageKey: "hrm_secret")
+    let record = PigeonRecord(registration: registration, token: "a1b2c3", lastSent: Date(timeIntervalSince1970: 0))
+    for text in ["\(registration)", String(reflecting: registration), "\(record)", String(reflecting: record)] {
+        #expect(text.contains("hrd_abc"))
+        #expect(!text.contains("hrm_secret"))
+        #expect(!text.contains("a1b2c3"))
+    }
+}

@@ -68,15 +68,21 @@ final class PushController {
     func start() {
         UNUserNotificationCenter.current().delegate = presenter
         guard wantsNotifications else { return }
+        // Shown as on straight away, so the toggle doesn't flicker while iOS answers.
+        phase = .registering
         Task {
             let stored = await registrar.storedDeviceId()
-            switch await currentAuthorization() {
+            let status = await currentAuthorization()
+            // The toggle may have been turned off meanwhile.
+            guard wantsNotifications, phase == .registering else { return }
+            switch status {
             case .denied:
                 deviceId = stored
                 phase = .denied
             case .notDetermined:
                 // The choice was made before this install (or never prompted): start from off.
                 wantsNotifications = false
+                phase = .off
             default:
                 deviceId = stored
                 beginRegistration()
@@ -84,14 +90,18 @@ final class PushController {
         }
     }
 
-    /// The person may have come back from iOS Settings.
+    /// The person may have come back from iOS Settings, where notifications can be turned on again
+    /// or off while the app keeps running.
     func returnedToApp() {
-        guard phase == .denied else { return }
+        guard phase != .off, phase != .asking else { return }
         Task {
-            switch await currentAuthorization() {
-            case .denied, .notDetermined:
-                break
-            default:
+            let status = await currentAuthorization()
+            guard phase != .off, phase != .asking else { return }
+            if status == .denied || status == .notDetermined {
+                // Turned off in iOS Settings: shown as off; the registration is kept for when it
+                // is allowed again.
+                phase = .denied
+            } else if phase == .denied {
                 if wantsNotifications {
                     beginRegistration()
                 } else {
