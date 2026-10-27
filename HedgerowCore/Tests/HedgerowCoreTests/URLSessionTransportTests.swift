@@ -84,6 +84,8 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         StubURLProtocol.reset { request, proto in
             if request.url?.host == "vole.example.com" {
                 proto.redirect(to: evil)
+                // URLSession cancels the redirect; the redirect response itself is what the caller gets.
+                proto.respond(status: 302, headers: ["Location": evil.absoluteString])
             } else {
                 proto.respond(status: 200, body: Data("{}".utf8))
             }
