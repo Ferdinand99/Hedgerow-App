@@ -103,3 +103,54 @@ public struct WrenClient: ServiceClient {
         return ServiceSummary(kind: .wren, health: health, headline: headline, details: details, fetchedAt: current)
     }
 }
+
+// MARK: - Lists and detail (Updates tab)
+
+extension WrenClient {
+    /// Runs asked for in the tab; the newest first. The server allows 500, the screen needs a few.
+    public static let recentRunsLimit = 30
+
+    /// The servers with their agents' status and mode.
+    /// `GET /api/v1/servers`
+    public func servers() async throws -> [WrenServer] {
+        try await http.getDecoded(WrenServersDTO.self, "/api/v1/servers", from: baseURL).servers.map(\.model)
+    }
+
+    /// The targets that have a new version, with the versions Wren knows. One request: the
+    /// server has no pages for this list (88 targets are about 60 kB).
+    /// `GET /api/v1/updates`
+    public func updates() async throws -> [WrenTarget] {
+        try await http.getDecoded(WrenTargetsDTO.self, Self.updatesPath, from: baseURL).targets.map(\.model)
+    }
+
+    /// Runs, newest first. `limit` is clamped to 1...500, the range the server accepts.
+    /// `GET /api/v1/runs?limit=`
+    public func runs(limit: Int = WrenClient.recentRunsLimit) async throws -> [WrenRun] {
+        let path = "/api/v1/runs?limit=\(min(max(limit, 1), 500))"
+        return try await http.getDecoded(WrenRunsDTO.self, path, from: baseURL).runs.map(\.model)
+    }
+
+    /// One run with its steps (status, duration and the end of each step's log).
+    /// `HedgerowError.badResponse(404)` when there is no such run.
+    /// `GET /api/v1/runs/{id}`
+    public func run(id: Int) async throws -> WrenRunDetail {
+        let dto = try await http.getDecoded(WrenRunDetailDTO.self, "/api/v1/runs/\(id)", from: baseURL)
+        return WrenRunDetail(run: dto.run.model, steps: dto.steps.enumerated().map { $0.element.model(at: $0.offset) })
+    }
+
+    /// Updates approved for a later time (soonest first), and each server's auto window.
+    /// Empty when the server does not know schedules (an older Wise Wren).
+    /// `GET /api/v1/schedules`
+    public func schedules() async throws -> WrenSchedules {
+        let dto: WrenSchedulesDTO
+        do {
+            dto = try await http.getDecoded(WrenSchedulesDTO.self, "/api/v1/schedules", from: baseURL)
+        } catch HedgerowError.badResponse(404) {
+            return WrenSchedules(timeZone: nil, scheduled: [], servers: [])
+        }
+        return WrenSchedules(
+            timeZone: dto.timeZone.flatMap { $0.isEmpty ? nil : $0 }, scheduled: dto.scheduled.map(\.model),
+            servers: dto.servers.map(\.model)
+        )
+    }
+}

@@ -41,7 +41,7 @@ struct RootTabView: View {
             }
             Tab("Updates", systemImage: "arrow.triangle.2.circlepath", value: AppTab.updates) {
                 ServiceTab(kind: .wren, title: "Updates", store: store, model: model, picks: picks) { context in
-                    ServiceTabPlaceholder(context: context, model: model)
+                    UpdatesView(context: context, store: store)
                 }
             }
             Tab("Settings", systemImage: "gearshape", value: AppTab.settings) {

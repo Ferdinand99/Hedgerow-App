@@ -1,0 +1,9 @@
+{"servers": [
+  {"id": 1, "name": "Tower", "status": "online", "last_seen_at": "2026-10-23 10:00:00", "hostname": "Tower", "os": "Unraid OS 7.4", "docker_version": "29.8.2", "docker_error": "", "agent_version": "0.4.0", "unraid": true, "mode": "approve", "auto_window": null, "check_interval_hours": 6},
+  {"id": 2, "name": "LANBox", "status": "offline", "last_seen_at": "2026-10-22 08:30:00", "hostname": "lanbox", "os": "Unraid OS 7.4", "docker_version": "29.8.2", "docker_error": "Cannot connect to the Docker daemon", "agent_version": "0.4.0", "unraid": true, "mode": "auto", "auto_window": {"start": "03:00", "end": "05:00"}, "check_interval_hours": 6},
+  {"id": 3, "name": "Pi", "status": "waiting", "last_seen_at": null, "hostname": "", "os": "", "docker_version": "", "agent_version": "", "unraid": false, "mode": "notify", "auto_window": null, "check_interval_hours": 24},
+  {"id": 4, "name": "Old box", "status": "no_token", "last_seen_at": null, "mode": "approve"},
+  {"id": 5, "name": "Future", "status": "hibernating", "mode": "teleport", "some_new_field": {"a": 1}},
+  {"name": "No id, skipped"},
+  "not an object"
+]}

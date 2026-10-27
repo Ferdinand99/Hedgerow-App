@@ -69,30 +69,6 @@ struct ServiceProblemView: View {
     }
 }
 
-/// What a service tab shows until its own screen exists: the shared loading and problem states
-/// from the Overview's data, and a "coming soon" note otherwise. The Monitors, Issues and
-/// Updates screens replace this.
-struct ServiceTabPlaceholder: View {
-    let context: ServiceContext
-    let model: OverviewModel
-
-    var body: some View {
-        let card = model.cards.first { $0.id == context.connection.id }
-        switch card?.phase {
-        case nil, .loading?:
-            ServiceLoadingView()
-        case .failed(let problem, let lastGood)?:
-            ServiceProblemView(
-                problem: problem, lastSeen: lastGood?.fetchedAt, replaceToken: context.replaceToken
-            )
-        case .loaded?:
-            ContentUnavailableView(
-                "Coming soon", systemImage: context.connection.kind.tabSymbol
-            )
-        }
-    }
-}
-
 extension ServiceKind {
     /// The symbol of the tab that shows this product.
     var tabSymbol: String {
