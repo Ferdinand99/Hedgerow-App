@@ -57,18 +57,15 @@ extension WrenRunStep {
 
 /// Loads one run with its steps. The run from the list is shown at once; the steps follow.
 @MainActor @Observable
-final class RunDetailModel {
+final class RunDetailModel: ScreenModel {
     private(set) var run: WrenRun
     private(set) var steps: [WrenRunStep] = []
     /// True once the steps have arrived (also when there are none).
     private(set) var hasLoaded = false
-    private(set) var isLoading = true
-    private(set) var problem: CardProblem?
-    private(set) var lastLoaded: Date?
+    let loader = LoadTracker()
 
     @ObservationIgnored private let connection: Connection
     @ObservationIgnored private let store: ConnectionStore
-    @ObservationIgnored private var generation = 0
 
     init(run: WrenRun, connection: Connection, store: ConnectionStore) {
         self.run = run
@@ -76,34 +73,13 @@ final class RunDetailModel {
         self.store = store
     }
 
-    func load() async {
-        generation += 1
-        let mine = generation
-        isLoading = true
-        defer { if mine == generation { isLoading = false } }
-
-        let client: WrenClient
-        switch wrenClient(for: connection, store: store) {
-        case .failure(let failure):
-            problem = failure
-            return
-        case .success(let made):
-            client = made
-        }
-        do {
-            let detail = try await client.run(id: run.id)
-            guard mine == generation else { return }
-            run = detail.run
-            steps = detail.steps
-            hasLoaded = true
-            problem = nil
-            lastLoaded = Date()
-        } catch is CancellationError {
-            return
-        } catch {
-            guard mine == generation, !Task.isCancelled else { return }
-            problem = CardProblem(error)
-        }
+    func fetch(_ ticket: LoadTracker.Ticket) async throws {
+        let client = try wrenClient(for: connection, store: store).get()
+        let detail = try await client.run(id: run.id)
+        guard ticket.isCurrent else { return }
+        run = detail.run
+        steps = detail.steps
+        hasLoaded = true
     }
 }
 
@@ -128,13 +104,7 @@ struct RunDetailView: View {
     var body: some View {
         List {
             if let problem = model.problem {
-                Section {
-                    Label(problem.message(lastSeen: model.lastLoaded), systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    if problem == .tokenRejected {
-                        Button("Replace token", action: context.replaceToken)
-                    }
-                }
+                ServiceProblemBanner(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
             }
             summary
             stepsSection
@@ -142,7 +112,7 @@ struct RunDetailView: View {
         .navigationTitle(model.run.targetName.isEmpty ? String(localized: "Run") : model.run.targetName)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await model.load() }
-        .task { await model.load() }
+        .refreshPolicy(model)
     }
 
     // MARK: Summary

@@ -69,6 +69,31 @@ struct ServiceProblemView: View {
     }
 }
 
+/// The orange note above data that is still on screen but could not be refreshed. A rejected token
+/// always comes with "Replace token"; `retry` adds "Try again" where nothing else would.
+struct ServiceProblemBanner: View {
+    let problem: CardProblem
+    let lastSeen: Date?
+    let replaceToken: () -> Void
+    var retry: (() -> Void)?
+
+    var body: some View {
+        Section {
+            Label(
+                problem.message(lastSeen: problem == .unreachable ? lastSeen : nil),
+                systemImage: "exclamationmark.triangle.fill"
+            )
+            .foregroundStyle(.orange)
+            if problem == .tokenRejected {
+                Button("Replace token", action: replaceToken)
+            }
+            if let retry {
+                Button("Try again", action: retry)
+            }
+        }
+    }
+}
+
 extension ServiceKind {
     /// The symbol of the tab that shows this product.
     var tabSymbol: String {

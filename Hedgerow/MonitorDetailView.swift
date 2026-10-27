@@ -7,16 +7,13 @@ import SwiftUI
 
 /// Loads one monitor's detail (latest check, uptime, recent events).
 @MainActor @Observable
-final class MonitorDetailModel {
+final class MonitorDetailModel: ScreenModel {
     private(set) var detail: VoleMonitorDetail?
-    private(set) var isLoading = true
-    private(set) var problem: CardProblem?
-    private(set) var lastLoaded: Date?
+    let loader = LoadTracker()
 
     @ObservationIgnored private let connection: Connection
     @ObservationIgnored private let store: ConnectionStore
     @ObservationIgnored private let monitorId: Int
-    @ObservationIgnored private var generation = 0
 
     init(monitorId: Int, connection: Connection, store: ConnectionStore) {
         self.monitorId = monitorId
@@ -24,36 +21,11 @@ final class MonitorDetailModel {
         self.store = store
     }
 
-    func load() async {
-        generation += 1
-        let mine = generation
-        isLoading = true
-        defer { if mine == generation { isLoading = false } }
-
-        let token: String?
-        do {
-            token = try store.token(for: connection.id)
-        } catch {
-            problem = .tokenUnreadable
-            return
-        }
-        guard let token else {
-            problem = .tokenRejected
-            return
-        }
-        let client = VoleClient(baseURL: connection.baseURL, http: HedgerowHTTP(token: token))
-        do {
-            let loaded = try await client.monitor(id: monitorId)
-            guard mine == generation else { return }
-            detail = loaded
-            problem = nil
-            lastLoaded = Date()
-        } catch is CancellationError {
-            return
-        } catch {
-            guard mine == generation, !Task.isCancelled else { return }
-            problem = CardProblem(error)
-        }
+    func fetch(_ ticket: LoadTracker.Ticket) async throws {
+        let client = try voleClient(for: connection, store: store).get()
+        let loaded = try await client.monitor(id: monitorId)
+        guard ticket.isCurrent else { return }
+        detail = loaded
     }
 }
 
@@ -77,28 +49,41 @@ struct MonitorDetailView: View {
         Group {
             if let detail = model.detail {
                 content(detail)
-            } else if let problem = model.problem {
-                ServiceProblemView(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
             } else {
-                ServiceLoadingView()
+                firstLoad
             }
         }
         .navigationTitle(monitor.name)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await model.load() }
+        .refreshable { await model.load() }
+        .refreshPolicy(model)
+    }
+
+    /// Before the first answer: progress, or why there is none, with a way to try again (a list, so
+    /// pulling down works here too).
+    private var firstLoad: some View {
+        List {
+            if let problem = model.problem {
+                ServiceProblemBanner(
+                    problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken,
+                    retry: { Task { await model.load() } }
+                )
+            } else {
+                Section {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Loading…")
+                    }
+                }
+            }
+        }
     }
 
     private func content(_ detail: VoleMonitorDetail) -> some View {
         let status = detail.monitor.displayStatus
         return List {
             if let problem = model.problem {
-                Section {
-                    Label(problem.message(lastSeen: model.lastLoaded), systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    if problem == .tokenRejected {
-                        Button("Replace token", action: context.replaceToken)
-                    }
-                }
+                ServiceProblemBanner(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
             }
 
             Section {
@@ -159,13 +144,13 @@ struct MonitorDetailView: View {
                 }
             }
         }
-        .refreshable { await model.load() }
     }
 
     @ViewBuilder
     private func uptimeText(_ percent: Double?) -> some View {
-        if let percent {
-            Text(percent / 100, format: .percent.precision(.fractionLength(0...2)))
+        // Rounded down, never up: 99.996 % must not read "100 %".
+        if let percent, let shown = VoleMonitorDetail.displayedUptime(percent) {
+            Text(shown / 100, format: .percent.precision(.fractionLength(0...2)))
         } else {
             Text(verbatim: "–")
         }

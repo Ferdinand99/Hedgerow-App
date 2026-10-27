@@ -78,8 +78,11 @@ struct ServiceTab<Content: View>: View {
 
     @State private var showingAdd = false
     @State private var replacingTokenFor: Connection?
-    /// Bumped when the token sheet closes, so the screen loads again with the new token.
+    /// Bumped when the token sheet closes with a different token, so the screen loads again with it.
     @State private var reloads = 0
+    /// What the saved token looked like when the sheet opened (a hash: the token itself is not kept
+    /// in memory here), to tell "Cancel" from "Save" when it closes.
+    @State private var tokenWhenSheetOpened: Int?
 
     var body: some View {
         let options = connections(of: kind, in: store)
@@ -110,11 +113,19 @@ struct ServiceTab<Content: View>: View {
         .sheet(item: $replacingTokenFor) { connection in
             ReplaceTokenView(store: store, connection: connection)
         }
-        .onChange(of: replacingTokenFor) { _, new in
-            if new == nil {
+        .onChange(of: replacingTokenFor) { old, new in
+            if let new {
+                tokenWhenSheetOpened = savedTokenFingerprint(of: new)
+            } else if let old, savedTokenFingerprint(of: old) != tokenWhenSheetOpened {
+                // Only a token that actually changed reloads; cancelling the sheet changes nothing.
                 reloads += 1
                 Task { await model.refresh() }
             }
         }
+    }
+
+    /// Stands in for the saved token when comparing before and after; `nil` for no (or an unreadable) token.
+    private func savedTokenFingerprint(of connection: Connection) -> Int? {
+        (try? store.token(for: connection.id))?.hashValue
     }
 }

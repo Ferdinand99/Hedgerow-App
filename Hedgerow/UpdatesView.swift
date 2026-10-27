@@ -119,29 +119,14 @@ struct WrenName: View {
     }
 }
 
-// MARK: - Client
-
-/// A Wise Wren client for a connection, or the problem that stops one: no token readable, or none
-/// saved (the same to the user as a token that does not work).
-@MainActor
-func wrenClient(for connection: Connection, store: ConnectionStore) -> Result<WrenClient, CardProblem> {
-    let token: String?
-    do {
-        token = try store.token(for: connection.id)
-    } catch {
-        return .failure(.tokenUnreadable)
-    }
-    guard let token else { return .failure(.tokenRejected) }
-    return .success(WrenClient(baseURL: connection.baseURL, http: HedgerowHTTP(token: token)))
-}
-
 // MARK: - Model
 
 /// Loads everything the Updates tab shows in one go: the targets with a new version, the scheduled
 /// runs, the latest runs and the servers. The four requests run side by side, so the first screen
-/// is as quick as the slowest one.
+/// is as quick as the slowest one. Targets and runs are what the tab is about: the schedules and the
+/// servers only add to them, so when those two fail (in any way) the tab shows without them.
 @MainActor @Observable
-final class UpdatesModel {
+final class UpdatesModel: ScreenModel {
     /// Sorted by server, then name.
     private(set) var waiting: [WrenTarget] = []
     /// Soonest first.
@@ -154,62 +139,37 @@ final class UpdatesModel {
     private(set) var timeZone: String?
     /// True once a load has ended with an answer; before that there is nothing to show but progress.
     private(set) var hasLoaded = false
-    /// True until the first load has ended, and while a reload runs.
-    private(set) var isLoading = true
-    /// Why the last load failed; what was loaded before stays on screen next to it.
-    private(set) var problem: CardProblem?
-    private(set) var lastLoaded: Date?
+    let loader = LoadTracker()
 
     @ObservationIgnored private let connection: Connection
     @ObservationIgnored private let store: ConnectionStore
-    /// A newer load makes an older one stop touching the screen.
-    @ObservationIgnored private var generation = 0
 
     init(connection: Connection, store: ConnectionStore) {
         self.connection = connection
         self.store = store
     }
 
-    func load() async {
-        generation += 1
-        let mine = generation
-        isLoading = true
-        defer { if mine == generation { isLoading = false } }
+    func fetch(_ ticket: LoadTracker.Ticket) async throws {
+        let client = try wrenClient(for: connection, store: store).get()
 
-        let client: WrenClient
-        switch wrenClient(for: connection, store: store) {
-        case .failure(let failure):
-            problem = failure
-            return
-        case .success(let made):
-            client = made
+        async let targets = client.updates()
+        async let runs = client.runs()
+        async let schedules = orFallback(WrenSchedules(timeZone: nil, scheduled: [], servers: [])) {
+            try await client.schedules()
         }
-
-        do {
-            async let targets = client.updates()
-            async let runs = client.runs()
-            async let schedules = client.schedules()
-            async let serverList = client.servers()
-            let (loadedTargets, loadedRuns, loadedSchedules, loadedServers) =
-                try await (targets, runs, schedules, serverList)
-            guard mine == generation else { return }
-            waiting = wrenSortedTargets(loadedTargets)
-            // A run that is only scheduled is under "Scheduled", not among the runs that happened.
-            let scheduledIds = Set(loadedSchedules.scheduled.map(\.id))
-            scheduled = loadedSchedules.scheduled.sorted { ($0.scheduledFor ?? .distantFuture) < ($1.scheduledFor ?? .distantFuture) }
-            recent = loadedRuns.filter { !scheduledIds.contains($0.id) && !$0.isScheduled }
-            servers = loadedServers
-            openWindows = Set(loadedSchedules.servers.filter(\.openNow).map(\.id))
-            timeZone = loadedSchedules.timeZone
-            hasLoaded = true
-            problem = nil
-            lastLoaded = Date()
-        } catch is CancellationError {
-            return
-        } catch {
-            guard mine == generation, !Task.isCancelled else { return }
-            problem = CardProblem(error)
-        }
+        async let serverList = orFallback([WrenServer]()) { try await client.servers() }
+        let (loadedTargets, loadedRuns, loadedSchedules, loadedServers) =
+            try await (targets, runs, schedules, serverList)
+        guard ticket.isCurrent else { return }
+        waiting = wrenSortedTargets(loadedTargets)
+        // A run that is only scheduled is under "Scheduled", not among the runs that happened.
+        let scheduledIds = Set(loadedSchedules.scheduled.map(\.id))
+        scheduled = loadedSchedules.scheduled.sorted { ($0.scheduledFor ?? .distantFuture) < ($1.scheduledFor ?? .distantFuture) }
+        recent = loadedRuns.filter { !scheduledIds.contains($0.id) && !$0.isScheduled }
+        servers = loadedServers
+        openWindows = Set(loadedSchedules.servers.filter(\.openNow).map(\.id))
+        timeZone = loadedSchedules.timeZone
+        hasLoaded = true
     }
 }
 
@@ -254,19 +214,13 @@ struct UpdatesView: View {
                 .disabled(model.isLoading)
             }
         }
-        .task { await model.load() }
+        .refreshPolicy(model)
     }
 
     private var list: some View {
         List {
             if let problem = model.problem {
-                Section {
-                    Label(problem.message(lastSeen: model.lastLoaded), systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    if problem == .tokenRejected {
-                        Button("Replace token", action: context.replaceToken)
-                    }
-                }
+                ServiceProblemBanner(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
             }
             waitingSection
             if !model.scheduled.isEmpty {

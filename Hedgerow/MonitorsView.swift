@@ -60,62 +60,30 @@ struct VoleStatusLabel: View {
 
 /// Loads the monitors of one connection, page by page, and keeps them for the screen.
 @MainActor @Observable
-final class MonitorsModel {
+final class MonitorsModel: ScreenModel {
     private(set) var monitors: [VoleMonitor] = []
-    /// True until the first load has ended, and while a reload runs.
-    private(set) var isLoading = true
-    /// Why the last load failed; the list from before stays on screen next to it.
-    private(set) var problem: CardProblem?
-    private(set) var lastLoaded: Date?
+    let loader = LoadTracker()
 
     @ObservationIgnored private let connection: Connection
     @ObservationIgnored private let store: ConnectionStore
-    /// A newer load makes an older one stop touching the screen.
-    @ObservationIgnored private var generation = 0
 
     init(connection: Connection, store: ConnectionStore) {
         self.connection = connection
         self.store = store
     }
 
-    func load() async {
-        generation += 1
-        let mine = generation
-        isLoading = true
-        defer { if mine == generation { isLoading = false } }
-
-        let token: String?
-        do {
-            token = try store.token(for: connection.id)
-        } catch {
-            problem = .tokenUnreadable
-            return
-        }
-        // No token in the Keychain is the same to the user as a token that doesn't work.
-        guard let token else {
-            problem = .tokenRejected
-            return
-        }
-        let client = VoleClient(baseURL: connection.baseURL, http: HedgerowHTTP(token: token))
+    func fetch(_ ticket: LoadTracker.Ticket) async throws {
+        let client = try voleClient(for: connection, store: store).get()
 
         // On a first load the rows appear as pages arrive; on a reload the list stays as it is
         // until the new one is complete, so it does not jump.
         let showProgress = monitors.isEmpty
-        do {
-            let all = try await client.monitors { [weak self] soFar in
-                guard showProgress, let self, self.generation == mine else { return }
-                self.monitors = soFar
-            }
-            guard mine == generation else { return }
-            monitors = all
-            problem = nil
-            lastLoaded = Date()
-        } catch is CancellationError {
-            return
-        } catch {
-            guard mine == generation, !Task.isCancelled else { return }
-            problem = CardProblem(error)
+        let all = try await client.monitors { [weak self] soFar in
+            guard showProgress, let self, ticket.isCurrent else { return }
+            self.monitors = soFar
         }
+        guard ticket.isCurrent else { return }
+        monitors = all
     }
 }
 
@@ -155,16 +123,11 @@ struct MonitorsView: View {
                 .disabled(model.isLoading)
             }
         }
-        .task { await model.load() }
+        .refreshPolicy(model)
     }
 
-    @ViewBuilder
     private var emptyContent: some View {
-        if let problem = model.problem {
-            ServiceProblemView(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
-        } else if model.isLoading {
-            ServiceLoadingView()
-        } else {
+        ServiceEmptyState(model: model, replaceToken: context.replaceToken) {
             ContentUnavailableView {
                 Label("No monitors", systemImage: "waveform.path.ecg")
             } description: {
@@ -179,13 +142,7 @@ struct MonitorsView: View {
         let count = model.monitors.reduce(0) { $0 + ($1.isGroup ? 0 : 1) }
         return List {
             if let problem = model.problem {
-                Section {
-                    Label(problem.message(lastSeen: model.lastLoaded), systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    if problem == .tokenRejected {
-                        Button("Replace token", action: context.replaceToken)
-                    }
-                }
+                ServiceProblemBanner(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
             }
             ForEach(sections) { section in
                 Section {
@@ -207,7 +164,8 @@ struct MonitorsView: View {
                         ProgressView()
                         Text("Loading more…")
                     }
-                } else if query.isEmpty {
+                } else if query.isEmpty && model.problem == nil {
+                    // After a failure the list may be cut off, so no count that sounds complete.
                     Text("\(count) monitors")
                 }
             }

@@ -54,88 +54,52 @@ struct IssueTitle: View {
     }
 }
 
-// MARK: - Client
-
-/// A Keen Kestrel client for a connection, or the problem that stops one: no token readable, or
-/// none saved (the same to the user as a token that does not work).
-@MainActor
-func kestrelClient(for connection: Connection, store: ConnectionStore) -> Result<KestrelClient, CardProblem> {
-    let token: String?
-    do {
-        token = try store.token(for: connection.id)
-    } catch {
-        return .failure(.tokenUnreadable)
-    }
-    guard let token else { return .failure(.tokenRejected) }
-    return .success(KestrelClient(baseURL: connection.baseURL, http: HedgerowHTTP(token: token)))
-}
-
 // MARK: - Projects model
 
 /// Loads the projects of one connection, and then how many unresolved issues each has.
+/// `load()` ends with the project list; the counts follow in a task of their own, so a pull to refresh
+/// does not wait for up to sixty more requests.
 @MainActor @Observable
-final class IssueProjectsModel {
+final class IssueProjectsModel: ScreenModel {
     /// Counts are fetched for this many projects at most, four at a time.
-    private static let maxCounted = 60
+    static let maxCounted = 60
     private static let countConcurrency = 4
 
     private(set) var projects: [KestrelProject] = []
     /// Unresolved issues per project id; a project missing here has no count (yet).
     private(set) var counts: [Int: Int] = [:]
-    /// True until the first load has ended, and while a reload runs.
-    private(set) var isLoading = true
-    /// Why the last load failed; the list from before stays on screen next to it.
-    private(set) var problem: CardProblem?
-    private(set) var lastLoaded: Date?
+    let loader = LoadTracker()
 
     @ObservationIgnored private let connection: Connection
     @ObservationIgnored private let store: ConnectionStore
-    /// A newer load makes an older one stop touching the screen.
-    @ObservationIgnored private var generation = 0
+    /// The counting that follows the last project list; a new load cancels it.
+    @ObservationIgnored private var countsTask: Task<Void, Never>?
 
     init(connection: Connection, store: ConnectionStore) {
         self.connection = connection
         self.store = store
     }
 
-    func load() async {
-        generation += 1
-        let mine = generation
-        isLoading = true
+    /// How many projects get a count, when there are more projects than that; `nil` when all do.
+    var countCap: Int? { projects.count > Self.maxCounted ? Self.maxCounted : nil }
 
-        let client: KestrelClient
-        switch kestrelClient(for: connection, store: store) {
-        case .failure(let failure):
-            problem = failure
-            isLoading = false
-            return
-        case .success(let made):
-            client = made
-        }
+    func fetch(_ ticket: LoadTracker.Ticket) async throws {
+        countsTask?.cancel()
+        countsTask = nil
 
-        do {
-            let loaded = try await client.projects()
-            guard mine == generation else { return }
-            projects = loaded
-            problem = nil
-            lastLoaded = Date()
-            isLoading = false
-        } catch is CancellationError {
-            if mine == generation { isLoading = false }
-            return
-        } catch {
-            guard mine == generation, !Task.isCancelled else { return }
-            problem = CardProblem(error)
-            isLoading = false
-            return
+        let client = try kestrelClient(for: connection, store: store).get()
+        let loaded = try await client.projects()
+        guard ticket.isCurrent else { return }
+        projects = loaded
+        let ids = loaded.prefix(Self.maxCounted).map(\.id)
+        countsTask = Task { [weak self] in
+            await self?.loadCounts(client: client, ids: ids, ticket: ticket)
         }
-        await loadCounts(client: client, projects: projects, generation: mine)
     }
 
     /// The counts arrive one by one, so the rows fill in while the list is already usable. A project
     /// whose count fails simply has none: the list itself loaded.
-    private func loadCounts(client: KestrelClient, projects: [KestrelProject], generation mine: Int) async {
-        let ids = projects.prefix(Self.maxCounted).map(\.id)
+    private func loadCounts(client: KestrelClient, ids: [Int], ticket: LoadTracker.Ticket) async {
         await withTaskGroup(of: (Int, Int?).self) { group in
             var index = 0
             while index < min(Self.countConcurrency, ids.count) {
@@ -144,8 +108,8 @@ final class IssueProjectsModel {
                 group.addTask { (id, try? await client.unresolvedCount(projectId: id)) }
             }
             while let (id, count) = await group.next() {
-                if mine == generation, let count { counts[id] = count }
-                if index < ids.count, mine == generation, !Task.isCancelled {
+                if ticket.isCurrent, let count { counts[id] = count }
+                if index < ids.count, ticket.isCurrent, !Task.isCancelled {
                     let next = ids[index]
                     index += 1
                     group.addTask { (next, try? await client.unresolvedCount(projectId: next)) }
@@ -189,16 +153,11 @@ struct IssuesView: View {
                 .disabled(model.isLoading)
             }
         }
-        .task { await model.load() }
+        .refreshPolicy(model)
     }
 
-    @ViewBuilder
     private var emptyContent: some View {
-        if let problem = model.problem {
-            ServiceProblemView(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
-        } else if model.isLoading {
-            ServiceLoadingView()
-        } else {
+        ServiceEmptyState(model: model, replaceToken: context.replaceToken) {
             ContentUnavailableView {
                 Label("No projects", systemImage: "ladybug")
             } description: {
@@ -212,13 +171,7 @@ struct IssuesView: View {
         let hasGroups = sections.contains { $0.group != nil }
         return List {
             if let problem = model.problem {
-                Section {
-                    Label(problem.message(lastSeen: model.lastLoaded), systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    if problem == .tokenRejected {
-                        Button("Replace token", action: context.replaceToken)
-                    }
-                }
+                ServiceProblemBanner(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
             }
             ForEach(sections) { section in
                 Section {
@@ -235,6 +188,12 @@ struct IssuesView: View {
                     } else if hasGroups {
                         Text("Not in a group").textCase(nil)
                     }
+                }
+            }
+            if let cap = model.countCap {
+                Section {
+                } footer: {
+                    Text("Only the first \(cap) projects are counted")
                 }
             }
         }
@@ -277,24 +236,21 @@ private struct ProjectRow: View {
 
 /// Loads a project's unresolved issues page by page; the next page follows as the end comes near.
 @MainActor @Observable
-final class ProjectIssuesModel {
+final class ProjectIssuesModel: ScreenModel {
     /// The next page is asked for when one of this many last rows shows up.
     private static let prefetchDistance = 15
 
     private(set) var list = KestrelIssueList()
-    /// True until the first page has arrived, and while a reload runs.
-    private(set) var isLoading = true
     private(set) var isLoadingMore = false
-    /// Why the first page (or a reload) failed; the issues from before stay on screen next to it.
-    private(set) var problem: CardProblem?
     /// Why a later page failed. Nothing more is asked for until the person taps "Try again".
     private(set) var moreProblem: CardProblem?
-    private(set) var lastLoaded: Date?
+    /// The first page's load; `problem` is why it (or a reload) failed, and the issues from before
+    /// stay on screen next to it.
+    let loader = LoadTracker()
 
     @ObservationIgnored private let projectId: Int
     @ObservationIgnored private let connection: Connection
     @ObservationIgnored private let store: ConnectionStore
-    @ObservationIgnored private var generation = 0
 
     init(projectId: Int, connection: Connection, store: ConnectionStore) {
         self.projectId = projectId
@@ -302,37 +258,18 @@ final class ProjectIssuesModel {
         self.store = store
     }
 
-    /// The first page; also a reload. The list from before stays until the new page is there.
-    func load() async {
-        generation += 1
-        let mine = generation
-        isLoading = true
+    /// The first page; also a reload. The list from before stays until the new page is there. A
+    /// screen that merely appears again does not get here while its data is fresh (`loadIfStale`), so
+    /// a list the person has scrolled into is only started over by a forced reload or old data.
+    func fetch(_ ticket: LoadTracker.Ticket) async throws {
         isLoadingMore = false
-        defer { if mine == generation { isLoading = false } }
-
-        let client: KestrelClient
-        switch kestrelClient(for: connection, store: store) {
-        case .failure(let failure):
-            problem = failure
-            return
-        case .success(let made):
-            client = made
-        }
-        do {
-            let page = try await client.issuesPage(projectId: projectId)
-            guard mine == generation else { return }
-            var fresh = KestrelIssueList()
-            try fresh.append(page)
-            list = fresh
-            problem = nil
-            moreProblem = nil
-            lastLoaded = Date()
-        } catch is CancellationError {
-            return
-        } catch {
-            guard mine == generation, !Task.isCancelled else { return }
-            problem = CardProblem(error)
-        }
+        let client = try kestrelClient(for: connection, store: store).get()
+        let page = try await client.issuesPage(projectId: projectId)
+        guard ticket.isCurrent else { return }
+        var fresh = KestrelIssueList()
+        try fresh.append(page)
+        list = fresh
+        moreProblem = nil
     }
 
     /// Called when a row shows up: asks for the next page when the end of the list is near.
@@ -348,7 +285,7 @@ final class ProjectIssuesModel {
 
     func loadMore() async {
         guard !isLoading, !isLoadingMore, moreProblem == nil, let cursor = list.nextCursor else { return }
-        let mine = generation
+        let ticket = loader.ticket
         let client: KestrelClient
         switch kestrelClient(for: connection, store: store) {
         case .failure(let failure):
@@ -358,10 +295,10 @@ final class ProjectIssuesModel {
             client = made
         }
         isLoadingMore = true
-        defer { if mine == generation { isLoadingMore = false } }
+        defer { if ticket.isCurrent { isLoadingMore = false } }
         do {
             let page = try await client.issuesPage(projectId: projectId, cursor: cursor)
-            guard mine == generation else { return }
+            guard ticket.isCurrent else { return }
             var grown = list
             do {
                 try grown.append(page)
@@ -375,7 +312,7 @@ final class ProjectIssuesModel {
         } catch is CancellationError {
             return
         } catch {
-            guard mine == generation, !Task.isCancelled else { return }
+            guard ticket.isCurrent, !Task.isCancelled else { return }
             moreProblem = CardProblem(error)
         }
     }
@@ -408,16 +345,11 @@ struct ProjectIssuesView: View {
         }
         .navigationTitle(project.name)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await model.load() }
+        .refreshPolicy(model)
     }
 
-    @ViewBuilder
     private var emptyContent: some View {
-        if let problem = model.problem {
-            ServiceProblemView(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
-        } else if model.isLoading {
-            ServiceLoadingView()
-        } else {
+        ServiceEmptyState(model: model, replaceToken: context.replaceToken) {
             ContentUnavailableView {
                 Label("No open issues", systemImage: "checkmark.circle")
             } description: {
@@ -429,13 +361,7 @@ struct ProjectIssuesView: View {
     private var list: some View {
         List {
             if let problem = model.problem {
-                Section {
-                    Label(problem.message(lastSeen: model.lastLoaded), systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    if problem == .tokenRejected {
-                        Button("Replace token", action: context.replaceToken)
-                    }
-                }
+                ServiceProblemBanner(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
             }
             Section {
                 ForEach(model.list.issues) { issue in
@@ -449,20 +375,27 @@ struct ProjectIssuesView: View {
             } footer: {
                 footer
             }
+            // A later page that failed: the same note as everywhere, "Replace token" included.
+            if let problem = model.moreProblem {
+                ServiceProblemBanner(
+                    problem: problem, lastSeen: nil, replaceToken: context.replaceToken,
+                    retry: retryMore
+                )
+            }
         }
         .refreshable { await model.load() }
     }
 
+    /// "Try again" for a failed later page, only while there is a later page to ask for.
+    private var retryMore: (() -> Void)? {
+        guard model.list.hasMore else { return nil }
+        return { Task { await model.retryMore() } }
+    }
+
     @ViewBuilder
     private var footer: some View {
-        if let problem = model.moreProblem {
-            VStack(alignment: .leading, spacing: 8) {
-                Label(problem.message(lastSeen: nil), systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                if model.list.hasMore {
-                    Button("Try again") { Task { await model.retryMore() } }
-                }
-            }
+        if model.moreProblem != nil {
+            EmptyView()
         } else if model.isLoadingMore {
             HStack(spacing: 8) {
                 ProgressView()

@@ -8,19 +8,16 @@ import SwiftUI
 
 /// Loads the latest event of one issue (summary fields, stack trace, tags).
 @MainActor @Observable
-final class IssueDetailModel {
+final class IssueDetailModel: ScreenModel {
     private(set) var event: KestrelEvent?
     /// True when the server has no event with details left for this issue (a 404 on the latest event).
     private(set) var noDetails = false
-    private(set) var isLoading = true
-    private(set) var problem: CardProblem?
-    private(set) var lastLoaded: Date?
+    let loader = LoadTracker()
 
     @ObservationIgnored private let projectId: Int
     @ObservationIgnored private let issueId: Int
     @ObservationIgnored private let connection: Connection
     @ObservationIgnored private let store: ConnectionStore
-    @ObservationIgnored private var generation = 0
 
     init(projectId: Int, issueId: Int, connection: Connection, store: ConnectionStore) {
         self.projectId = projectId
@@ -29,38 +26,17 @@ final class IssueDetailModel {
         self.store = store
     }
 
-    func load() async {
-        generation += 1
-        let mine = generation
-        isLoading = true
-        defer { if mine == generation { isLoading = false } }
-
-        let client: KestrelClient
-        switch kestrelClient(for: connection, store: store) {
-        case .failure(let failure):
-            problem = failure
-            return
-        case .success(let made):
-            client = made
-        }
+    func fetch(_ ticket: LoadTracker.Ticket) async throws {
+        let client = try kestrelClient(for: connection, store: store).get()
         do {
             let loaded = try await client.latestEvent(projectId: projectId, issueId: issueId)
-            guard mine == generation else { return }
+            guard ticket.isCurrent else { return }
             event = loaded
             noDetails = false
-            problem = nil
-            lastLoaded = Date()
         } catch HedgerowError.badResponse(404) {
-            guard mine == generation else { return }
+            guard ticket.isCurrent else { return }
             event = nil
             noDetails = true
-            problem = nil
-            lastLoaded = Date()
-        } catch is CancellationError {
-            return
-        } catch {
-            guard mine == generation, !Task.isCancelled else { return }
-            problem = CardProblem(error)
         }
     }
 }
@@ -87,13 +63,7 @@ struct IssueDetailView: View {
     var body: some View {
         List {
             if let problem = model.problem {
-                Section {
-                    Label(problem.message(lastSeen: model.lastLoaded), systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    if problem == .tokenRejected {
-                        Button("Replace token", action: context.replaceToken)
-                    }
-                }
+                ServiceProblemBanner(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
             }
 
             summary
@@ -117,7 +87,7 @@ struct IssueDetailView: View {
         .navigationTitle(project.name)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await model.load() }
-        .task { await model.load() }
+        .refreshPolicy(model)
     }
 
     // MARK: Summary
