@@ -11,18 +11,20 @@ struct ConnectionsView: View {
 
     var body: some View {
         List {
-            ForEach(store.connections) { connection in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(connection.displayName)
-                    Text(verbatim: "\(connection.kind.displayName) · \(connection.baseURL.absoluteString)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityElement(children: .combine)
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    Button("Remove", role: .destructive) { remove(connection) }
-                    Button("Replace token") { replacingTokenFor = connection }
-                        .tint(.blue)
+            Section("Connections") {
+                ForEach(store.connections) { connection in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(connection.displayName)
+                        Text(verbatim: "\(connection.kind.displayName) · \(connection.baseURL.absoluteString)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button("Remove", role: .destructive) { remove(connection) }
+                        Button("Replace token") { replacingTokenFor = connection }
+                            .tint(.blue)
+                    }
                 }
             }
         }
@@ -35,7 +37,7 @@ struct ConnectionsView: View {
                 }
             }
         }
-        .navigationTitle("Connections")
+        .navigationTitle("Settings")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showingAdd = true } label: {

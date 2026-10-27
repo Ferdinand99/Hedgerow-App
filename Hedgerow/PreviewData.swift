@@ -59,12 +59,22 @@ enum PreviewData {
 
 #Preview("Overview, mixed") {
     let (store, model) = PreviewData.mixed()
-    return NavigationStack { OverviewView(store: store, model: model) }
+    return NavigationStack { OverviewView(store: store, model: model, onOpen: { _ in }) }
 }
 
 #Preview("Overview, empty") {
     let (store, model) = PreviewData.make([])
-    return NavigationStack { OverviewView(store: store, model: model) }
+    return NavigationStack { OverviewView(store: store, model: model, onOpen: { _ in }) }
+}
+
+#Preview("Tabs, mixed") {
+    let (store, model) = PreviewData.mixed()
+    return RootTabView(store: store, model: model)
+}
+
+#Preview("Tabs, empty") {
+    let (store, model) = PreviewData.make([])
+    return RootTabView(store: store, model: model)
 }
 
 #Preview("Add") {

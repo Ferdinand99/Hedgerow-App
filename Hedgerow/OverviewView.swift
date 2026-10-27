@@ -4,6 +4,8 @@ import SwiftUI
 struct OverviewView: View {
     let store: ConnectionStore
     let model: OverviewModel
+    /// A tap on a card: the tab of that product with that connection selected.
+    let onOpen: (Connection) -> Void
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var showingAdd = false
@@ -25,9 +27,11 @@ struct OverviewView: View {
                     LazyVStack(spacing: 12) {
                         OverallStatusView(health: model.overallHealth, status: model.overallStatus)
                         ForEach(model.cards) { card in
-                            ServiceCardView(card: card) {
+                            ServiceCardView(card: card, replaceToken: {
                                 replacingTokenFor = card.connection
-                            }
+                            }, onOpen: {
+                                onOpen(card.connection)
+                            })
                         }
                     }
                     .padding(.horizontal)
@@ -38,13 +42,6 @@ struct OverviewView: View {
         }
         .navigationTitle("Overview")
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                NavigationLink {
-                    ConnectionsView(store: store, model: model)
-                } label: {
-                    Label("Connections", systemImage: "list.bullet")
-                }
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showingAdd = true } label: {
                     Label("Add a service", systemImage: "plus")
@@ -104,6 +101,7 @@ private struct OverallStatusView: View {
 struct ServiceCardView: View {
     let card: ServiceCard
     let replaceToken: () -> Void
+    let onOpen: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -130,7 +128,11 @@ struct ServiceCardView: View {
                 .fill(card.health.color)
                 .frame(width: 5)
         }
+        .contentShape(RoundedRectangle(cornerRadius: 14))
+        // The "Replace token" button inside the card handles its own taps.
+        .onTapGesture(perform: onOpen)
         .accessibilityElement(children: .contain)
+        .accessibilityAction(named: "Open", onOpen)
     }
 
     @ViewBuilder
