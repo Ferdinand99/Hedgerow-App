@@ -12,6 +12,15 @@ extension SummaryLine {
     }
 }
 
+/// "2 min. ago" / "for 2 min. siden": always in the past (a time ahead of `now`, from clock skew,
+/// counts as now), in the person's language.
+func relativeAge(of date: Date, now: Date = Date()) -> String {
+    let formatter = RelativeDateTimeFormatter()
+    formatter.unitsStyle = .short
+    formatter.dateTimeStyle = .numeric
+    return formatter.localizedString(for: min(date, now), relativeTo: now)
+}
+
 extension Health {
     var color: Color {
         switch self {
@@ -58,7 +67,7 @@ extension CardProblem {
         switch self {
         case .unreachable:
             if let lastSeen {
-                let when = RelativeDateTimeFormatter().localizedString(for: lastSeen, relativeTo: Date())
+                let when = relativeAge(of: lastSeen)
                 return String(localized: "Can't reach it (last seen \(when))")
             }
             return String(localized: "Can't reach it")

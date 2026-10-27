@@ -32,6 +32,16 @@ public enum CardProblem: Error, Sendable, Equatable {
     }
 }
 
+/// The line above the cards. "Something is down" is reserved for Vigilant Vole reporting monitors
+/// down; any other critical or warning state (a failed Wise Wren update run, an unreachable
+/// service) is "needs attention", so the line never claims more than it knows.
+public enum OverallStatus: Sendable, Equatable {
+    case unknown
+    case ok
+    case needsAttention
+    case somethingDown
+}
+
 /// One card on the Overview: a saved connection and what is known about it.
 public struct ServiceCard: Identifiable, Sendable, Equatable {
     public enum Phase: Sendable, Equatable {
@@ -103,6 +113,25 @@ public final class OverviewModel {
         if all.contains(.warning) { return .warning }
         if all.allSatisfy({ $0 == .unknown }) { return .unknown }
         return .ok
+    }
+
+    /// What the line above the cards says: "down" only when a Vigilant Vole card reports monitors
+    /// down, "needs attention" for any other critical or warning card, "ok" when all is well.
+    public var overallStatus: OverallStatus {
+        let loaded = cards.filter { $0.phase != .loading }
+        guard !loaded.isEmpty else { return .unknown }
+        let voleReportsDown = loaded.contains { card in
+            if case .loaded(let summary) = card.phase {
+                return card.connection.kind == .vole && summary.health == .critical
+            }
+            return false
+        }
+        if voleReportsDown { return .somethingDown }
+        switch overallHealth {
+        case .critical, .warning: return .needsAttention
+        case .ok: return .ok
+        case .unknown: return .unknown
+        }
     }
 
     /// Makes `cards` match the saved connections (new ones start as "loading", removed ones go,

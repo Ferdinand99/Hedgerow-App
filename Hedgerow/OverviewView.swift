@@ -23,7 +23,7 @@ struct OverviewView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        OverallStatusView(health: model.overallHealth)
+                        OverallStatusView(health: model.overallHealth, status: model.overallStatus)
                         ForEach(model.cards) { card in
                             ServiceCardView(card: card) {
                                 replacingTokenFor = card.connection
@@ -74,9 +74,10 @@ struct OverviewView: View {
 /// The red/yellow/green line above the cards.
 private struct OverallStatusView: View {
     let health: Health
+    let status: OverallStatus
 
     var body: some View {
-        if health != .unknown {
+        if status != .unknown {
             HStack(spacing: 8) {
                 Image(systemName: health.symbol)
                     .foregroundStyle(health.color)
@@ -91,10 +92,10 @@ private struct OverallStatusView: View {
     }
 
     private var title: LocalizedStringKey {
-        switch health {
+        switch status {
         case .ok: "Everything looks fine"
-        case .warning: "Something needs attention"
-        case .critical: "Something is down"
+        case .needsAttention: "Something needs attention"
+        case .somethingDown: "Something is down"
         case .unknown: ""
         }
     }
@@ -111,7 +112,7 @@ struct ServiceCardView: View {
                 .foregroundStyle(card.health.color)
                 .accessibilityLabel(card.health.label)
             VStack(alignment: .leading, spacing: 4) {
-                Text(card.connection.name)
+                Text(card.connection.displayName)
                     .font(.headline)
                 Text(verbatim: "\(card.connection.kind.displayName) · \(card.connection.baseURL.host() ?? "")")
                     .font(.caption)
@@ -139,9 +140,12 @@ struct ServiceCardView: View {
             ProgressView()
         case .loaded(let summary):
             summaryLines(summary)
-            Text("Updated \(relative(summary.fetchedAt))")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            // Re-evaluated as time passes, so "just now" turns into "2 min ago" by itself.
+            TimelineView(.periodic(from: .now, by: 15)) { context in
+                updatedText(summary.fetchedAt, now: context.date)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         case .failed(let problem, let lastGood):
             Text(problem.message(lastSeen: problem == .unreachable ? lastGood?.fetchedAt : nil))
                 .font(.subheadline.weight(.semibold))
@@ -169,7 +173,11 @@ struct ServiceCardView: View {
         }
     }
 
-    private func relative(_ date: Date) -> String {
-        RelativeDateTimeFormatter().localizedString(for: date, relativeTo: Date())
+    private func updatedText(_ fetchedAt: Date, now: Date) -> Text {
+        if isJustNow(fetchedAt, now: now) {
+            Text("Updated just now")
+        } else {
+            Text("Updated \(relativeAge(of: fetchedAt, now: now))")
+        }
     }
 }

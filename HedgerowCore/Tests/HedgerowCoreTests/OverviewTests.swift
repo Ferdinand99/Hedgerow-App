@@ -235,4 +235,49 @@ private func summary(_ kind: ServiceKind, _ health: Health, at date: Date = Date
         #expect(model.cards.count == 3)
         #expect(model.overallHealth == .unknown)
     }
+
+    // MARK: overall status line
+
+    private func status(_ vole: StubClient.Behaviour, _ kestrel: StubClient.Behaviour, _ wren: StubClient.Behaviour) async throws -> OverallStatus {
+        let script = Script()
+        let (model, _, connections) = try makeFixture(script: script)
+        script.set(vole, for: connections[0].id)
+        script.set(kestrel, for: connections[1].id)
+        script.set(wren, for: connections[2].id)
+        await model.refresh()
+        return model.overallStatus
+    }
+
+    @Test func overallStatusIsDownOnlyWhenVoleReportsMonitorsDown() async throws {
+        defer { cleanUp() }
+        let result = try await status(
+            .summary(summary(.vole, .critical)), .summary(summary(.kestrel, .ok)), .summary(summary(.wren, .ok)))
+        #expect(result == .somethingDown)
+    }
+
+    @Test func aCriticalWrenAloneNeedsAttentionButIsNotDown() async throws {
+        defer { cleanUp() }
+        let result = try await status(
+            .summary(summary(.vole, .ok)), .summary(summary(.kestrel, .ok)), .summary(summary(.wren, .critical)))
+        #expect(result == .needsAttention)
+    }
+
+    @Test func warningsAndUnreachableServicesNeedAttention() async throws {
+        defer { cleanUp() }
+        let warning = try await status(
+            .summary(summary(.vole, .ok)), .summary(summary(.kestrel, .warning)), .summary(summary(.wren, .ok)))
+        #expect(warning == .needsAttention)
+        let unreachable = try await status(
+            .error(.unreachable("offline")), .summary(summary(.kestrel, .ok)), .summary(summary(.wren, .ok)))
+        #expect(unreachable == .needsAttention)
+    }
+
+    @Test func overallStatusIsOkWhenAllIsWellAndUnknownBeforeLoading() async throws {
+        defer { cleanUp() }
+        let ok = try await status(
+            .summary(summary(.vole, .ok)), .summary(summary(.kestrel, .ok)), .summary(summary(.wren, .ok)))
+        #expect(ok == .ok)
+        let (model, _, _) = try makeFixture(script: Script())
+        #expect(model.overallStatus == .unknown)
+    }
 }

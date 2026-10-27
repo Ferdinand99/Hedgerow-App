@@ -195,3 +195,9 @@ func boundedMap<Item: Sendable, Result: Sendable>(
         return results.compactMap { $0 }
     }
 }
+
+/// Whether `date` is recent enough to be called "just now": less than 10 seconds ago, or in
+/// the future (a fetch time slightly ahead of the phone's clock must never read as "in 0 seconds").
+public func isJustNow(_ date: Date, now: Date = Date()) -> Bool {
+    now.timeIntervalSince(date) < 10
+}
