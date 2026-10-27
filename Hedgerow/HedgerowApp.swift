@@ -18,9 +18,7 @@ struct RootView: View {
     var body: some View {
         switch app.state {
         case .ready(let store, let model):
-            NavigationStack {
-                OverviewView(store: store, model: model)
-            }
+            RootTabView(store: store, model: model)
         case .storageDamaged:
             StorageDamagedView(app: app)
         }

@@ -1,0 +1,24 @@
+{
+  "event_id": "11112222333344445555666677778888",
+  "issue_id": 43,
+  "project_id": 1,
+  "timestamp": "2026-10-22 10:00:00",
+  "level": "fatal",
+  "release": "app@2.0+7",
+  "environment": "",
+  "has_details": true,
+  "payload": {
+    "platform": "cocoa",
+    "tags": [["os", "iOS 18.1"]],
+    "threads": {"values": [
+      {"id": 0, "name": "main", "current": true, "crashed": false, "stacktrace": {"frames": [
+        {"function": "idle", "package": "UIKit", "in_app": false}
+      ]}},
+      {"id": 4, "name": "com.apple.root.default-qos", "crashed": true, "stacktrace": {"frames": [
+        {"function": "start", "package": "dyld", "in_app": false},
+        {"function": "Sylo.sync()", "filename": "Sync.swift", "lineno": 30, "colno": 5, "in_app": true},
+        {"function": "swift_retain", "package": "libswiftCore.dylib", "in_app": false}
+      ]}}
+    ]}
+  }
+}

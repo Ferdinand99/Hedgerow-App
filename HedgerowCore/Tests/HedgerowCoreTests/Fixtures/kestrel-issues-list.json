@@ -1,0 +1,54 @@
+{
+  "data": [
+    {
+      "id": 42,
+      "project_id": 1,
+      "title": "ValueError: invalid literal for int() with base 10: 'abc'",
+      "culprit": "shop.views in checkout",
+      "level": "error",
+      "platform": "python",
+      "status": "unresolved",
+      "substatus": "new",
+      "first_seen": "2026-10-22 08:00:00",
+      "last_seen": "2026-10-22 09:15:00",
+      "events": 17,
+      "users": 4,
+      "first_release": "shop@1.4.0",
+      "last_release": "shop@1.4.1",
+      "resolved_in_release": null,
+      "ignore_until": null,
+      "ignore_until_count": null,
+      "grouping_config": "kestrel:v2",
+      "unsymbolicated": false,
+      "path": "/projects/1/issues/42"
+    },
+    {"id": "not a number", "title": "A broken item the app skips"},
+    null,
+    {
+      "id": 57,
+      "project_id": 1,
+      "title": "**bold** [click](https://evil.example/phish) <b>title</b>",
+      "culprit": "",
+      "level": "fatal",
+      "status": "unresolved",
+      "first_seen": "2026-10-21 10:00:00",
+      "last_seen": "2026-10-22 07:00:00",
+      "events": 3,
+      "users": 1,
+      "last_release": null
+    },
+    {
+      "id": 58,
+      "project_id": 1,
+      "title": "Something new",
+      "level": "weird-level",
+      "first_seen": "2026-10-22 06:00:00",
+      "last_seen": "2026-10-22 06:00:00",
+      "events": 1,
+      "users": 0
+    }
+  ],
+  "next_cursor": "100",
+  "total": 132,
+  "unknown_terms": []
+}

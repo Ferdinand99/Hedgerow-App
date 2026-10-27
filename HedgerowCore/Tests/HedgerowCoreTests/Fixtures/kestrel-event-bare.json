@@ -1,0 +1,11 @@
+{
+  "event_id": "aaaabbbbccccddddeeeeffff00001111",
+  "issue_id": 44,
+  "project_id": 1,
+  "timestamp": "2026-10-22 11:00:00",
+  "level": "warning",
+  "release": null,
+  "environment": null,
+  "has_details": true,
+  "payload": {"exception": "weird", "tags": "nope", "threads": 5}
+}

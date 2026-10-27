@@ -1,0 +1,6 @@
+{"data": [
+  {"id": 14, "monitor_id": 7, "kind": "down", "message": "connection refused <script>alert(1)</script>", "started_at": "2026-10-23 11:01:00", "ended_at": null, "duration_seconds": null},
+  {"id": 13, "monitor_id": 7, "kind": "maintenance", "message": null, "started_at": "2026-10-20 02:00:00", "ended_at": "2026-10-20 03:00:00", "duration_seconds": 3600},
+  {"id": 12, "monitor_id": 7, "kind": "down", "message": "timeout", "started_at": "2026-10-18 03:10:00", "ended_at": "2026-10-18 03:14:00", "duration_seconds": 240},
+  {"id": 11, "monitor_id": 7, "kind": "something_new", "message": "from a newer server", "started_at": "2026-10-17 03:10:00", "ended_at": "2026-10-17 03:11:00", "duration_seconds": 60}
+], "next_cursor": null}
