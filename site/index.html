@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' 'sha256-WZRJfWvsnNCPcxzZwvyhovnZGqhZaC+8gPGPRbx6wTk='; style-src 'self'; img-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'none'"
+    />
+    <title>Hedgerow-App — one app for your Hedgerow servers (in development)</title>
+    <meta
+      name="description"
+      content="Hedgerow-App is one native app for iPhone, iPad and Android that brings your self-hosted Vigilant Vole, Keen Kestrel and Wise Wren servers together: an overview of what needs attention and quick actions. Open source and in development; not available yet."
+    />
+    <script>document.documentElement.classList.add("js");</script>
+    <link rel="canonical" href="https://hedgerow.tools/Hedgerow-App/" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon.png" type="image/png" sizes="48x48" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0b0b0d" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://hedgerow.tools/Hedgerow-App/" />
+    <meta property="og:site_name" content="Hedgerow-App" />
+    <meta property="og:title" content="Hedgerow-App — one app for your Hedgerow servers (in development)" />
+    <meta
+      property="og:description"
+      content="Is everything OK? One overview of your self-hosted Vigilant Vole, Keen Kestrel and Wise Wren servers, with quick actions. Talks only to your own servers. Open source, in development."
+    />
+    <meta property="og:image" content="https://hedgerow.tools/Hedgerow-App/icon-512.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="The Hedgerow-App logo, the Hedgerow sprig with its coloured berries on a dark tile." />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Hedgerow-App — one app for your Hedgerow servers (in development)" />
+    <meta
+      name="twitter:description"
+      content="Is everything OK? One overview of your self-hosted Vigilant Vole, Keen Kestrel and Wise Wren servers, with quick actions. Talks only to your own servers. Open source, in development."
+    />
+    <meta name="twitter:image" content="https://hedgerow.tools/Hedgerow-App/icon-512.png" />
+    <link rel="preload" href="fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Hedgerow-App",
+        "description": "A planned native app for iPhone, iPad and Android that brings self-hosted Vigilant Vole, Keen Kestrel and Wise Wren servers together. In development; not available yet.",
+        "url": "https://hedgerow.tools/Hedgerow-App/",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "iOS 18 or later, Android 10 or later",
+        "image": "https://hedgerow.tools/Hedgerow-App/icon-512.png",
+        "license": "https://github.com/Ferdinand99/Hedgerow-App/blob/main/LICENSE",
+        "sameAs": ["https://github.com/Ferdinand99/Hedgerow-App"]
+      }
+    </script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <svg width="0" height="0" class="vh" aria-hidden="true" focusable="false">
+      <symbol id="gh" viewBox="0 0 16 16">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+      </symbol>
+    </svg>
+
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar" id="top">
+      <div class="wrap topbar-inner">
+        <a class="brand" href="#top">
+          <img src="favicon.svg" alt="" width="28" height="28" />
+          <span>Hedgerow-App</span>
+        </a>
+
+        <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="topnav" hidden>
+          <span></span><span></span>
+        </button>
+
+        <nav class="topnav" id="topnav" aria-label="Main">
+          <a class="topnav-link" href="#services">Services</a>
+          <a class="topnav-link" href="#screens">What you see</a>
+          <a class="topnav-link" href="#security">Security</a>
+          <a class="topnav-link" href="#platforms">Platforms</a>
+          <a class="topnav-link" href="#roadmap">Roadmap</a>
+          <a class="topnav-link" href="#faq">FAQ</a>
+          <a class="btn btn-ghost btn-sm" href="https://github.com/Ferdinand99/Hedgerow-App" aria-label="Follow Hedgerow-App on GitHub">
+            <svg class="gh-mark" aria-hidden="true"><use href="#gh"></use></svg>
+            <span>Follow on GitHub</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero ============================================================ -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="wrap">
+          <div class="hero-copy">
+            <div class="hero-icon">
+              <img src="assets/hedgerow-mark.svg" width="96" height="96" alt="" />
+            </div>
+            <a class="live-pill" href="#roadmap">
+              <span class="dot" aria-hidden="true"></span>
+              <span>In development</span>
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-right"></use></svg>
+            </a>
+            <h1 class="display" id="hero-title">One app for your<br class="br-wide" /> Hedgerow servers.</h1>
+            <p class="lead">
+              Hedgerow-App brings your self-hosted Vigilant Vole, Keen Kestrel and Wise Wren
+              together on your phone. One Overview answers “is everything OK?”, and the quick
+              actions you reach for most are a tap away: pause a monitor, resolve an issue, approve
+              an update.
+            </p>
+            <p class="hero-fine">In development. Nothing to install yet, and no release date.</p>
+            <div class="hero-actions">
+              <a class="btn btn-primary btn-lg" href="https://github.com/Ferdinand99/Hedgerow-App">
+                <svg class="gh-mark" aria-hidden="true"><use href="#gh"></use></svg>
+                <span>Follow on GitHub</span>
+              </a>
+              <a class="btn btn-ghost btn-lg" href="#roadmap">
+                <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#calendar"></use></svg>
+                <span>See the roadmap</span>
+              </a>
+            </div>
+            <p class="hero-meta"><span>iPhone, iPad and Android</span><span>Only talks to your servers</span><span>Open source, AGPL-3.0</span></p>
+          </div>
+
+          <figure class="hero-shot hero-shot-phone">
+            <div
+              class="phone"
+              role="img"
+              aria-label="Concept illustration of the Overview screen on a phone. A banner says two things need a look. Vigilant Vole shows all twelve monitors up. Keen Kestrel shows three new issues in the last 24 hours. Wise Wren shows two updates waiting. A tab bar below has Overview, Monitors, Issues, Updates and Settings. The data is made up."
+            >
+              <div class="phone-screen">
+                <span class="phone-notch"></span>
+                <span class="phone-title">Overview</span>
+                <div class="phone-ok status-warning">
+                  <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#alert-circle"></use></svg>
+                  <span>Two things need a look<small>Updated just now</small></span>
+                </div>
+                <ul class="list">
+                  <li>
+                    <div class="list-row app-vole app-tint">
+                      <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#pulse"></use></svg></span>
+                      <span class="list-main"><span class="list-title">Vigilant Vole</span><span class="list-sub">12 monitors · 0 down</span></span>
+                      <span class="pill status-up"><span class="dot"></span>All up</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="list-row app-kestrel app-tint">
+                      <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#alert-circle"></use></svg></span>
+                      <span class="list-main"><span class="list-title">Keen Kestrel</span><span class="list-sub">3 new issues · 24 h</span></span>
+                      <span class="pill status-warning"><span class="dot"></span>Look</span>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="list-row app-wren app-tint">
+                      <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#refresh"></use></svg></span>
+                      <span class="list-main"><span class="list-title">Wise Wren</span><span class="list-sub">2 updates waiting</span></span>
+                      <span class="pill status-warning"><span class="dot"></span>Look</span>
+                    </div>
+                  </li>
+                </ul>
+                <div class="phone-tabs">
+                  <span class="phone-tab is-on"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#dashboard"></use></svg>Overview</span>
+                  <span class="phone-tab"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#pulse"></use></svg>Monitors</span>
+                  <span class="phone-tab"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#alert-circle"></use></svg>Issues</span>
+                  <span class="phone-tab"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#refresh"></use></svg>Updates</span>
+                  <span class="phone-tab"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#gear"></use></svg>Settings</span>
+                </div>
+              </div>
+            </div>
+            <figcaption>Concept illustration with made-up data. The real screens are still being built.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Services ======================================================== -->
+      <section class="section" id="services" aria-labelledby="services-title">
+        <div class="wrap">
+          <header class="section-head reveal">
+            <p class="eyebrow">Your servers, one place</p>
+            <h2 class="headline" id="services-title">Three services, one overview.</h2>
+            <p class="sub">
+              Instead of three web pages in a browser, you get one app that answers “is everything
+              OK?” and links straight to the right place. It works with your own self-hosted
+              servers, whoever runs them. Connect the ones you use; you don’t need all three.
+            </p>
+          </header>
+
+          <ul class="grid">
+            <li class="card svc app-vole reveal">
+              <img class="svc-icon" src="assets/apps/vigilant-vole.svg" width="56" height="56" alt="" />
+              <h3>Vigilant Vole</h3>
+              <p class="svc-kind">Uptime monitoring</p>
+              <p>Is something down? See monitors with status and response time, pause one, or start maintenance.</p>
+              <a class="link-arrow" href="https://hedgerow.tools/Vigilant-Vole/">Vigilant Vole<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-right"></use></svg></a>
+            </li>
+            <li class="card svc app-kestrel reveal d1">
+              <img class="svc-icon" src="assets/apps/keen-kestrel.svg" width="56" height="56" alt="" />
+              <h3>Keen Kestrel</h3>
+              <p class="svc-kind">Error tracking and analytics</p>
+              <p>Have new errors or crashes appeared? Read the latest event and stack trace, then resolve or ignore the issue.</p>
+              <a class="link-arrow" href="https://hedgerow.tools/Keen-Kestrel/">Keen Kestrel<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-right"></use></svg></a>
+            </li>
+            <li class="card svc app-wren reveal d2">
+              <img class="svc-icon" src="assets/apps/wise-wren.svg" width="56" height="56" alt="" />
+              <h3>Wise Wren</h3>
+              <p class="svc-kind">Container updates</p>
+              <p>Is an update waiting? Approve it, schedule it, or roll back one that went wrong.</p>
+              <a class="link-arrow" href="https://hedgerow.tools/Wise-Wren/">Wise Wren<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-right"></use></svg></a>
+            </li>
+          </ul>
+
+          <p class="later reveal">
+            <strong>Not a copy of the websites.</strong> Setup, users, notification channels and
+            other settings stay on each service’s web interface. The app is for looking and for the
+            few actions you need on the go.
+          </p>
+        </div>
+      </section>
+
+      <!-- What you see ==================================================== -->
+      <section class="section section-alt" id="screens" aria-labelledby="screens-title">
+        <div class="wrap">
+          <header class="section-head reveal">
+            <p class="eyebrow">What you see</p>
+            <h2 class="headline" id="screens-title">An Overview, then a tab for each service.</h2>
+            <p class="sub">
+              These are the screens planned for the first version. They are being built in the order
+              shown in the <a href="#roadmap">roadmap</a>.
+            </p>
+          </header>
+
+          <ul class="grid grid-2">
+            <li class="card feature screen reveal">
+              <span class="list-icon status-accent"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#dashboard"></use></svg></span>
+              <h3>Overview</h3>
+              <p>One card per connected service, with red, yellow and green at the top: monitors down, new errors in the last 24 hours, updates waiting. Tap a card to go to its tab.</p>
+            </li>
+            <li class="card feature screen app-vole app-tint reveal d1">
+              <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#pulse"></use></svg></span>
+              <h3>Monitors</h3>
+              <p>Your monitors with status and response time, grouped as in Vigilant Vole, with search. A detail view shows a chart and recent incidents.</p>
+              <ul class="chips"><li class="chip">Pause or resume</li><li class="chip">Start maintenance</li></ul>
+            </li>
+            <li class="card feature screen app-kestrel app-tint reveal">
+              <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#alert-circle"></use></svg></span>
+              <h3>Issues</h3>
+              <p>Projects and their issues, sorted by latest or count. An issue shows its latest event with the stack trace, tags and release.</p>
+              <ul class="chips"><li class="chip">Resolve</li><li class="chip">Ignore</li></ul>
+            </li>
+            <li class="card feature screen app-wren app-tint reveal d1">
+              <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#refresh"></use></svg></span>
+              <h3>Updates</h3>
+              <p>Your servers and the targets with a newer version, plus scheduled and recent runs with their steps.</p>
+              <ul class="chips"><li class="chip">Approve</li><li class="chip">Schedule</li><li class="chip">Cancel</li><li class="chip">Roll back</li></ul>
+            </li>
+          </ul>
+
+          <p class="later reveal">
+            <strong>Widgets:</strong> a small “is everything OK?” widget and a medium one with the
+            three services. <strong>Notifications:</strong> see the <a href="#faq">questions</a> below.
+          </p>
+        </div>
+      </section>
+
+      <!-- Security ======================================================== -->
+      <section class="section" id="security" aria-labelledby="security-title">
+        <div class="wrap">
+          <header class="section-head reveal">
+            <p class="eyebrow">Security</p>
+            <h2 class="headline" id="security-title">Your servers, your tokens, your phone.</h2>
+            <p class="sub">
+              The app is a client for your own servers and nothing else. These are the rules it is
+              built around.
+            </p>
+          </header>
+
+          <ul class="grid">
+            <li class="card feature reveal">
+              <span class="list-icon status-accent"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#server"></use></svg></span>
+              <h3>Only your servers</h3>
+              <p>The app talks to the servers you add, through their existing REST API, with an API token. There is <strong>no Hedgerow account and no cloud</strong> in between.</p>
+            </li>
+            <li class="card feature reveal d1">
+              <span class="list-icon status-accent"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#key"></use></svg></span>
+              <h3>Tokens stay on the device</h3>
+              <p>Tokens are kept in the iOS Keychain or the Android Keystore, for this device only, and are left out of backups.</p>
+            </li>
+            <li class="card feature reveal d2">
+              <span class="list-icon status-accent"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#eye"></use></svg></span>
+              <h3>Read-only is the default advice</h3>
+              <p>The app recommends a <strong>read-only token</strong>. You only need a token that can write if you want to use the quick actions.</p>
+            </li>
+          </ul>
+
+          <ul class="grid">
+            <li class="card feature reveal">
+              <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#shield-check"></use></svg></span>
+              <h3>Writes need your face or finger</h3>
+              <p>Pausing, resolving, approving and rolling back are confirmed with Face ID, Touch ID or your device’s biometrics, so a lost phone can’t change anything.</p>
+            </li>
+            <li class="card feature reveal d1">
+              <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#lock"></use></svg></span>
+              <h3>https only</h3>
+              <p>Connections use https. Addresses on your local network are the one exception, and the app never follows a redirect with your token attached.</p>
+            </li>
+            <li class="card feature reveal d2">
+              <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#eye-off"></use></svg></span>
+              <h3>Your data stays with your servers</h3>
+              <p>No third-party SDK sees data from your servers, and the app doesn’t send it anywhere except back to those servers.</p>
+            </li>
+          </ul>
+
+          <div class="steps-notes">
+            <div class="callout status-info reveal">
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#info"></use></svg>
+              <p>
+                <span class="callout-title">Early software</span>
+                The app is still being built and hasn’t had an independent security review. The
+                source is public so that anyone can read and check it.
+              </p>
+            </div>
+            <div class="callout status-warning reveal d1">
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#alert"></use></svg>
+              <p>
+                <span class="callout-title">A token is a key</span>
+                Anyone with a copy of a token can use it. Give each phone its own token, make it
+                read-only if you can, and revoke it on the server if you lose the phone.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Platforms ======================================================= -->
+      <section class="section section-alt" id="platforms" aria-labelledby="platforms-title">
+        <div class="wrap">
+          <header class="section-head reveal">
+            <p class="eyebrow">Platforms</p>
+            <h2 class="headline" id="platforms-title">iPhone, iPad and Android.</h2>
+            <p class="sub">
+              Two native apps with the same screens, in English and Norwegian. They work with any
+              current release of the three services that has the REST API v1.
+            </p>
+          </header>
+
+          <ul class="grid grid-2">
+            <li class="card feature reveal">
+              <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#box"></use></svg></span>
+              <h3>iPhone and iPad</h3>
+              <p>iOS 18 or later. It starts on <strong>TestFlight</strong>, with the App Store to follow.</p>
+            </li>
+            <li class="card feature reveal d1">
+              <span class="list-icon"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#download"></use></svg></span>
+              <h3>Android</h3>
+              <p>Android 10 or later. An <strong>APK from the GitHub releases</strong>, not Google Play. The app updates itself: it downloads the new APK, checks its signature and asks you to confirm the install.</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Roadmap ========================================================= -->
+      <section class="section" id="roadmap" aria-labelledby="roadmap-title">
+        <div class="wrap">
+          <header class="section-head reveal">
+            <p class="eyebrow">Status</p>
+            <h2 class="headline" id="roadmap-title">Where it stands.</h2>
+            <p class="sub">
+              Hedgerow-App is in development and not available yet. The phases below are the order
+              the work happens in, not cuts in scope, and there are no dates: each phase is done
+              when it works.
+            </p>
+          </header>
+
+          <ol class="roadmap">
+            <li class="milestone is-now reveal">
+              <span class="ms-marker" aria-hidden="true"><span class="dot is-live"></span></span>
+              <div class="ms-body">
+                <p class="ms-status"><span class="pill status-accent"><span class="dot"></span>Now</span></p>
+                <h3>Foundation</h3>
+                <p>Connect a service by pasting its address and token, and an Overview with real data from Vigilant Vole, Keen Kestrel and Wise Wren.</p>
+              </div>
+            </li>
+            <li class="milestone reveal">
+              <span class="ms-marker" aria-hidden="true"></span>
+              <div class="ms-body">
+                <p class="ms-status"><span class="pill">Then</span></p>
+                <h3>The tabs</h3>
+                <p>Monitors, Issues and Updates, for reading.</p>
+              </div>
+            </li>
+            <li class="milestone reveal">
+              <span class="ms-marker" aria-hidden="true"></span>
+              <div class="ms-body">
+                <p class="ms-status"><span class="pill">Then</span></p>
+                <h3>Actions</h3>
+                <p>Pause, resolve, approve and roll back, each confirmed with biometrics.</p>
+              </div>
+            </li>
+            <li class="milestone reveal">
+              <span class="ms-marker" aria-hidden="true"></span>
+              <div class="ms-body">
+                <p class="ms-status"><span class="pill">Then</span></p>
+                <h3>Connect with a QR code</h3>
+                <p>A “Connect the Hedgerow app” option on each server’s token page that shows a QR code to scan, with a token of the role and expiry you choose.</p>
+              </div>
+            </li>
+            <li class="milestone reveal">
+              <span class="ms-marker" aria-hidden="true"></span>
+              <div class="ms-body">
+                <p class="ms-status"><span class="pill">Then</span></p>
+                <h3>Widgets and background refresh</h3>
+                <p>Home-screen widgets, and local notifications when the app refreshes in the background.</p>
+              </div>
+            </li>
+            <li class="milestone reveal">
+              <span class="ms-marker" aria-hidden="true"></span>
+              <div class="ms-body">
+                <p class="ms-status"><span class="pill">Then</span></p>
+                <h3>Android</h3>
+                <p>The same screens on Android, with APK releases on GitHub and updates inside the app, with the signature checked.</p>
+              </div>
+            </li>
+            <li class="milestone reveal">
+              <span class="ms-marker" aria-hidden="true"></span>
+              <div class="ms-body">
+                <p class="ms-status"><span class="pill">Then</span></p>
+                <h3>TestFlight, then the App Store</h3>
+                <p>Privacy details, the icon and screenshots, then a first build on TestFlight.</p>
+              </div>
+            </li>
+            <li class="milestone reveal">
+              <span class="ms-marker" aria-hidden="true"></span>
+              <div class="ms-body">
+                <p class="ms-status"><span class="pill">Later</span></p>
+                <h3>Push notifications</h3>
+                <p>Instant alerts: on iOS through a Hedgerow push relay, on Android through UnifiedPush, without Google Play services.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- FAQ ============================================================= -->
+      <section class="section section-alt" id="faq" aria-labelledby="faq-title">
+        <div class="wrap">
+          <header class="section-head reveal">
+            <h2 class="headline" id="faq-title">Questions.</h2>
+          </header>
+          <ul class="faq reveal">
+            <li>
+              <details>
+                <summary>When can I use it?<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg></summary>
+                <div class="faq-body">
+                  <p>
+                    Not yet. The app is in development, with the foundation first, and there is no
+                    release date. Watch or star the
+                    <a href="https://github.com/Ferdinand99/Hedgerow-App">repository</a> to hear about progress.
+                  </p>
+                </div>
+              </details>
+            </li>
+            <li>
+              <details>
+                <summary>Do I need a Hedgerow account?<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg></summary>
+                <div class="faq-body">
+                  <p>
+                    No. There is no Hedgerow account and no Hedgerow cloud. The app talks directly
+                    to your own servers with an API token you create there.
+                  </p>
+                </div>
+              </details>
+            </li>
+            <li>
+              <details>
+                <summary>Do I need all three services?<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg></summary>
+                <div class="faq-body">
+                  <p>
+                    No. Connect the ones you run. The app checks which service lives at an address
+                    and what your token is allowed to do, and shows only what applies.
+                  </p>
+                </div>
+              </details>
+            </li>
+            <li>
+              <details>
+                <summary>Which server versions work?<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg></summary>
+                <div class="faq-body">
+                  <p>
+                    Any current release of
+                    <a href="https://hedgerow.tools/Vigilant-Vole/">Vigilant Vole</a>,
+                    <a href="https://hedgerow.tools/Keen-Kestrel/">Keen Kestrel</a> or
+                    <a href="https://hedgerow.tools/Wise-Wren/">Wise Wren</a>, which all offer the
+                    REST API v1. Some conveniences, like connecting with a QR code, will need a newer
+                    release of each service.
+                  </p>
+                </div>
+              </details>
+            </li>
+            <li>
+              <details>
+                <summary>How will I get notifications?<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg></summary>
+                <div class="faq-body">
+                  <p>
+                    First, the app refreshes when you open it, when you pull down, and in the
+                    background when your phone allows it, and shows local notifications for changes.
+                    That needs no extra server, but it isn’t instant.
+                  </p>
+                  <p>
+                    Later, push notifications: on iOS through a Hedgerow push relay, on Android
+                    through UnifiedPush. A push only says that something happened. It never carries
+                    secrets.
+                  </p>
+                </div>
+              </details>
+            </li>
+            <li>
+              <details>
+                <summary>Why isn’t the Android app on Google Play?<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg></summary>
+                <div class="faq-body">
+                  <p>
+                    The Android app is an APK from the GitHub releases, which can update itself from
+                    inside the app after checking the signature. That fits an AGPL-licensed project
+                    and doesn’t depend on Google Play services.
+                  </p>
+                </div>
+              </details>
+            </li>
+            <li>
+              <details>
+                <summary>Is it open source?<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg></summary>
+                <div class="faq-body">
+                  <p>
+                    Yes, under the
+                    <a href="https://github.com/Ferdinand99/Hedgerow-App/blob/main/LICENSE">GNU AGPL-3.0-only</a>.
+                  </p>
+                  <p>
+                    Contributions aren’t open yet. When they are, a contributor licence agreement
+                    (CLA) will be required for code contributions.
+                  </p>
+                </div>
+              </details>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap">
+        <div class="footer-top">
+          <a class="brand" href="#top">
+            <img src="favicon.svg" alt="" width="24" height="24" loading="lazy" />
+            <span>Hedgerow-App</span>
+          </a>
+          <span>Made in Norway</span>
+        </div>
+        <nav aria-label="Project links">
+          <ul class="footer-links">
+            <li><a href="https://github.com/Ferdinand99/Hedgerow-App">GitHub</a></li>
+            <li><a href="https://github.com/Ferdinand99/Hedgerow-App#readme">README</a></li>
+            <li><a href="https://github.com/Ferdinand99/Hedgerow-App/issues">Issues</a></li>
+            <li><a href="https://github.com/Ferdinand99/Hedgerow-App/blob/main/LICENSE">AGPL-3.0 license</a></li>
+          </ul>
+        </nav>
+        <p class="sibling">
+          Part of <a href="https://hedgerow.tools/">Hedgerow</a>, small self-hosted apps that live
+          together, with <a href="https://hedgerow.tools/Vigilant-Vole/">Vigilant Vole</a>, a
+          lightweight uptime monitor, <a href="https://hedgerow.tools/Keen-Kestrel/">Keen Kestrel</a>,
+          error tracking and analytics, and <a href="https://hedgerow.tools/Wise-Wren/">Wise Wren</a>,
+          Docker container updates.
+        </p>
+        <p>
+          Hedgerow-App is open source under the GNU AGPL-3.0 and is in development: not available
+          yet. This site uses no cookies and no analytics.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

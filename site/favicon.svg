@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#232327"/>
+      <stop offset="1" stop-color="#0b0b0d"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+  <rect x=".75" y=".75" width="62.5" height="62.5" rx="14.25" fill="none" stroke="#ffffff" stroke-opacity=".12" stroke-width="1.5"/>
+  <!-- A hedgerow sprig: one branch, four berries in the family's colours
+       (Vigilant Vole violet, Nimble Newt lime, Keen Kestrel amber, Wise Wren rose) -->
+  <g transform="translate(-1 -6)">
+    <path d="M11 42.5C20 36 30 33.5 41 34.5 47 35 51.5 33 54 29" fill="none" stroke="#8fbf7f" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M24 37.6C22.5 31.5 25.5 26 31.5 23.5 32.5 29.5 29.5 35 24 37.6Z" fill="#8fbf7f"/>
+    <path d="M43 34.6C44 28.8 48.5 25 54.5 24.5 53.6 30.4 49 34.4 43 34.6Z" fill="#8fbf7f"/>
+    <path d="M16.2 39.3l-1.1 5.6M27.2 35.4l-.1 5.4M39 34.5l.2 5.4M48.2 34.3l1.9 5" fill="none" stroke="#8fbf7f" stroke-width="1.6" stroke-linecap="round"/>
+    <circle cx="14.6" cy="47.6" r="4.4" fill="#8b7dff"/>
+    <circle cx="26.9" cy="43.9" r="4.4" fill="#b3d621"/>
+    <circle cx="39.2" cy="43" r="4.4" fill="#ff9f0a"/>
+    <circle cx="51.2" cy="42.3" r="4.4" fill="#ff6482"/>
+  </g>
+</svg>
