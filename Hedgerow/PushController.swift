@@ -60,6 +60,9 @@ final class PushController {
     @ObservationIgnored private let backoff: PushBackoff
     @ObservationIgnored private let presenter = ForegroundPresenter()
     @ObservationIgnored private var store: ConnectionStore?
+    /// The device was registered again once in this launch because the relay did not know it. A second
+    /// time is not tried: a relay that keeps saying so gets the next launch.
+    @ObservationIgnored private var reregisteredThisLaunch = false
     /// The calls to the registrar and the manager run one after the other.
     @ObservationIgnored private var queue: Task<Void, Never>?
 
@@ -208,6 +211,8 @@ final class PushController {
                 let registration = try await registrar.apply(token: deviceToken)
                 guard wantsNotifications else { return }
                 deviceId = registration.deviceId
+                // A new relay device (registered again): what was held back for the old one is moot.
+                backoff.noteRelayDevice(registration.deviceId)
                 phase = .registered
                 syncConnections()
             } catch is CancellationError {
@@ -238,6 +243,11 @@ final class PushController {
     /// the connections starts when the device is registered.
     func attach(_ store: ConnectionStore) {
         self.store = store
+        // Choices and waiting times for connections that are gone (removed on another launch, or the
+        // list was reset) are forgotten. Only a list that could be read gets here.
+        let ids = Set(store.connections.map(\.id))
+        preferences.purge(keeping: ids)
+        backoff.purge(keeping: ids)
         syncConnections()
     }
 
@@ -266,6 +276,30 @@ final class PushController {
                 if !heldBack.contains(id) { remember(status, for: id) }
             }
             statuses = next
+            reregisterIfTheRelayLostTheDevice(in: next)
+        }
+    }
+
+    /// The relay says it does not know this device, or refuses its manage key: register the device
+    /// again right away (Apple hands the token over again, `didRegister` makes a new registration
+    /// and then the handles) instead of waiting for the daily keep-alive to find out. Once per launch.
+    /// If it happens again the connections show "try later", and the next launch tries.
+    private func reregisterIfTheRelayLostTheDevice(in results: [UUID: PushConnectionStatus]) {
+        guard results.values.contains(.relayReset) else { return }
+        guard !reregisteredThisLaunch else {
+            for (id, status) in results where status == .relayReset {
+                statuses[id] = .tryLater
+                backoff.record(id, status: .tryLater)
+            }
+            return
+        }
+        reregisteredThisLaunch = true
+        phase = .registering
+        deviceId = nil
+        enqueue { [self] in
+            await registrar.reregister()
+            guard wantsNotifications else { return }
+            UIApplication.shared.registerForRemoteNotifications()
         }
     }
 
@@ -292,6 +326,7 @@ final class PushController {
                 guard preferences.isOn(connection.id) else { return }
                 statuses[connection.id] = status
                 remember(status, for: connection.id)
+                reregisterIfTheRelayLostTheDevice(in: [connection.id: status])
             }
         } else {
             statuses[connection.id] = .off
@@ -299,13 +334,32 @@ final class PushController {
         }
     }
 
-    /// A connection is about to be removed: its server forgets this device and the relay revokes the
-    /// handle. It has to come first, because it needs the connection's token. A server that cannot be
-    /// reached does not hold the removal up for long, and the local entry is cleared either way.
-    func connectionWillBeRemoved(_ connection: Connection) async {
-        statuses[connection.id] = nil
+    /// The token of a connection was replaced. The server drops the devices that were registered with
+    /// the old token, so the handle it had is dead even though it is still on file: take it down and
+    /// make a new one with the new token. Nothing happens for a connection that is switched off.
+    func tokenWasReplaced(_ connection: Connection) {
+        guard phase == .registered, preferences.isOn(connection.id) else { return }
         backoff.clear(connection.id)
-        preferences.set(connection.id, on: true)
+        statuses[connection.id] = .working
+        let manager = manager
+        enqueue { [self] in
+            guard phase == .registered, wantsNotifications, preferences.isOn(connection.id) else { return }
+            let status = await manager.renew(connection)
+            guard preferences.isOn(connection.id) else { return }
+            statuses[connection.id] = status
+            remember(status, for: connection.id)
+            reregisterIfTheRelayLostTheDevice(in: [connection.id: status])
+        }
+    }
+
+    /// A connection is about to be removed: the relay revokes the handle (that stops the pushes) and
+    /// its server forgets this device. It has to come first, because it needs the connection's token.
+    /// A server that cannot be reached does not hold the removal up for long, and the local entry is
+    /// cleared either way. The person's choices for the connection are kept until the removal worked
+    /// (`connectionWasRemoved`).
+    func connectionWillBeRemoved(_ connection: Connection) async {
+        statuses[connection.id] = .working
+        backoff.clear(connection.id)
         let manager = manager
         let task = enqueue {
             _ = try? await withDeadline(.seconds(8)) {
@@ -313,6 +367,13 @@ final class PushController {
             }
         }
         await task.value
+    }
+
+    /// The removal worked: the connection's choices and status go too.
+    func connectionWasRemoved(_ id: UUID) {
+        statuses[id] = nil
+        backoff.clear(id)
+        preferences.set(id, on: true)
     }
 
     private func remember(_ status: PushConnectionStatus, for id: UUID) {

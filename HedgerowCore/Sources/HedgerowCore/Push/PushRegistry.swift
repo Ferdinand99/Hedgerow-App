@@ -130,6 +130,14 @@ public struct PushPreferences: @unchecked Sendable {
         defaults.set(Array(list).sorted(), forKey: Self.key)
     }
 
+    /// Forgets the choices for connections that no longer exist.
+    public func purge(keeping ids: Set<UUID>) {
+        let known = Set(ids.map { $0.uuidString })
+        let list = disabled
+        let kept = list.intersection(known)
+        if kept != list { defaults.set(Array(kept).sorted(), forKey: Self.key) }
+    }
+
     private var disabled: Set<String> {
         Set(defaults.stringArray(forKey: Self.key) ?? [])
     }
@@ -143,6 +151,7 @@ public struct PushPreferences: @unchecked Sendable {
 /// hand always tries.
 public struct PushBackoff: @unchecked Sendable {
     private static let key = "push.retryAfter"
+    private static let deviceKey = "push.retryAfter.relayDevice"
     static let window: TimeInterval = 3600
 
     private struct Item: Codable {
@@ -173,6 +182,22 @@ public struct PushBackoff: @unchecked Sendable {
     public func clear(_ id: UUID) {
         var list = items
         if list.removeValue(forKey: id.uuidString) != nil { save(list) }
+    }
+
+    /// The relay device is a new one (it was registered again): what was remembered about the old
+    /// one no longer holds, so nothing stays held back.
+    public func noteRelayDevice(_ deviceId: String) {
+        guard defaults.string(forKey: Self.deviceKey) != deviceId else { return }
+        defaults.removeObject(forKey: Self.key)
+        defaults.set(deviceId, forKey: Self.deviceKey)
+    }
+
+    /// Forgets connections that no longer exist.
+    public func purge(keeping ids: Set<UUID>) {
+        let known = Set(ids.map { $0.uuidString })
+        let list = items
+        let kept = list.filter { known.contains($0.key) }
+        if kept.count != list.count { save(kept) }
     }
 
     private var items: [String: Item] {

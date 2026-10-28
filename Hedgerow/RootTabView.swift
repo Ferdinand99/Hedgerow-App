@@ -22,6 +22,8 @@ struct RootTabView: View {
     @State var selection: AppTab = .overview
     @State private var picks = ServicePicks()
     @Environment(PushController.self) private var push
+    /// Bumped by a tap on a notification: the service tabs start over at their first screen.
+    @State private var stackResets = 0
 
     var body: some View {
         TabView(selection: $selection) {
@@ -31,17 +33,17 @@ struct RootTabView: View {
                 }
             }
             Tab("Monitors", systemImage: "waveform.path.ecg", value: AppTab.monitors) {
-                ServiceTab(kind: .vole, title: "Monitors", store: store, model: model, picks: picks) { context in
+                ServiceTab(kind: .vole, title: "Monitors", store: store, model: model, picks: picks, resets: stackResets) { context in
                     MonitorsView(context: context, store: store)
                 }
             }
             Tab("Issues", systemImage: "ladybug", value: AppTab.issues) {
-                ServiceTab(kind: .kestrel, title: "Issues", store: store, model: model, picks: picks) { context in
+                ServiceTab(kind: .kestrel, title: "Issues", store: store, model: model, picks: picks, resets: stackResets) { context in
                     IssuesView(context: context, store: store)
                 }
             }
             Tab("Updates", systemImage: "arrow.triangle.2.circlepath", value: AppTab.updates) {
-                ServiceTab(kind: .wren, title: "Updates", store: store, model: model, picks: picks) { context in
+                ServiceTab(kind: .wren, title: "Updates", store: store, model: model, picks: picks, resets: stackResets) { context in
                     UpdatesView(context: context, store: store)
                 }
             }
@@ -57,6 +59,9 @@ struct RootTabView: View {
             guard let request else { return }
             // Only one of the app's own connections can be shown.
             if let connection = store.connections.first(where: { $0.id == request.connectionId }) {
+                // Back to the first screen of the tab: the notification is about this connection, not
+                // about whatever screen was open in that tab before.
+                stackResets += 1
                 showService(connection)
             }
             push.clearOpenRequest()
@@ -89,6 +94,8 @@ struct ServiceTab<Content: View>: View {
     let store: ConnectionStore
     let model: OverviewModel
     let picks: ServicePicks
+    /// Changing it gives the tab's `NavigationStack` a new identity, which pops it to its root.
+    let resets: Int
     @ViewBuilder let content: (ServiceContext) -> Content
 
     @State private var showingAdd = false
@@ -121,6 +128,7 @@ struct ServiceTab<Content: View>: View {
                 }
             }
         }
+        .id(resets)
         .sheet(isPresented: $showingAdd) {
             AddConnectionView(store: store)
         }

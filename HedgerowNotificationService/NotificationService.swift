@@ -17,26 +17,28 @@ final class NotificationService: UNNotificationServiceExtension {
         _ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
     ) {
         let content = (request.content.mutableCopy() as? UNMutableNotificationContent) ?? UNMutableNotificationContent()
-        let delivery = Delivery(content: content, handler: contentHandler)
-        lock.withLock { self.delivery = delivery }
-
         // Read here, so the task below holds only values that are safe to pass on.
         let payload = PushPayload.parse(request.content.userInfo)
+        let rewriter = NotificationRewriter(
+            registry: PushRegistry(fileURL: AppStorageLocation.pushRegistryFile),
+            connections: { readConnections(at: AppStorageLocation.connectionsFile) },
+            vault: AppStorageLocation.makeVault()
+        )
+        // What goes out if the text cannot be fetched in time: the generic text, grouped by connection.
+        let delivery = Delivery(content: content, handler: contentHandler, fallback: rewriter.grouping(for: payload))
+        lock.withLock { self.delivery = delivery }
+
         Task {
-            let rewriter = NotificationRewriter(
-                registry: PushRegistry(fileURL: AppStorageLocation.pushRegistryFile),
-                connections: { readConnections(at: AppStorageLocation.connectionsFile) },
-                vault: AppStorageLocation.makeVault()
-            )
             let rewrite = await rewriter.rewrite(payload)
             delivery.finish(with: rewrite)
         }
     }
 
-    /// The system is about to end the extension: the notification goes out as it is.
+    /// The system is about to end the extension: the notification goes out with the generic text, but
+    /// still grouped by connection.
     override func serviceExtensionTimeWillExpire() {
         let pending = lock.withLock { delivery }
-        pending?.finish(with: .unchanged)
+        pending?.expire()
     }
 }
 
@@ -46,10 +48,19 @@ private final class Delivery: @unchecked Sendable {
     private let lock = NSLock()
     private var content: UNMutableNotificationContent?
     private var handler: ((UNNotificationContent) -> Void)?
+    private let fallback: NotificationRewrite
 
-    init(content: UNMutableNotificationContent, handler: @escaping (UNNotificationContent) -> Void) {
+    init(
+        content: UNMutableNotificationContent, handler: @escaping (UNNotificationContent) -> Void,
+        fallback: NotificationRewrite
+    ) {
         self.content = content
         self.handler = handler
+        self.fallback = fallback
+    }
+
+    func expire() {
+        finish(with: fallback)
     }
 
     func finish(with rewrite: NotificationRewrite) {

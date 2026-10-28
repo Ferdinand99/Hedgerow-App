@@ -163,7 +163,7 @@ struct ReplaceTokenView: View {
     private func save() {
         errorMessage = nil
         isWorking = true
-        let service = store, id = connection.id, secret = token
+        let service = store, id = connection.id, secret = token, replaced = connection
         task = Task { @MainActor in
             defer { isWorking = false }
             do {
@@ -173,6 +173,8 @@ struct ReplaceTokenView: View {
                 // Cancelled while the check was finishing: keep the old token.
                 try Task.checkCancellation()
                 try service.replaceToken(id, token: secret)
+                // The server drops the devices registered with the old token: push needs a new handle.
+                PushController.shared.tokenWasReplaced(replaced)
                 dismiss()
             } catch is CancellationError {
                 // Cancelled by the person: nothing to say.

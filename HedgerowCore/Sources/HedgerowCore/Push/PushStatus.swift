@@ -12,6 +12,10 @@ public enum PushConnectionStatus: String, Codable, Sendable, Equatable {
     case serverPushOff
     /// The server answered as one that has no push (an older version), or refused the token for it.
     case serverNotReady
+    /// The relay does not know this device any more (`gone`), refused its manage key, or the device has
+    /// no registration yet. The app registers the device again and then makes the handles; nothing to
+    /// wait an hour for, so this is never remembered as a problem.
+    case relayReset
     /// A limit or a busy relay or server (`409 too_many_*`, `429`, `503`, no connection): calm, tried again later.
     case tryLater
     /// Anything else (the token was refused, an answer the app does not understand).
@@ -22,8 +26,9 @@ public enum PushConnectionStatus: String, Codable, Sendable, Equatable {
         switch error {
         case let error as PigeonError:
             switch error {
-            case .gone, .rateLimited, .limitReached, .unavailable: self = .tryLater
-            case .invalidCredentials, .insecureURL, .unexpected: self = .failed
+            case .gone, .invalidCredentials: self = .relayReset
+            case .rateLimited, .limitReached, .unavailable: self = .tryLater
+            case .insecureURL, .unexpected: self = .failed
             }
         case let error as PushServerError:
             switch error {
@@ -43,7 +48,7 @@ public enum PushConnectionStatus: String, Codable, Sendable, Equatable {
     public var isProblem: Bool {
         switch self {
         case .serverPushOff, .serverNotReady, .tryLater, .failed: true
-        case .off, .working, .on: false
+        case .off, .working, .on, .relayReset: false
         }
     }
 }

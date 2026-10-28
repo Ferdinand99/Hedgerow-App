@@ -64,12 +64,22 @@ public struct NotificationRewriter: Sendable {
         self.makeClient = makeClient
     }
 
+    /// Only the grouping: no network, no Keychain. What the notification gets when the text cannot be
+    /// fetched (or the extension runs out of time).
+    public func grouping(for payload: PushPayload) -> NotificationRewrite {
+        connection(for: payload).map { NotificationRewrite(threadIdentifier: $0.id.uuidString) } ?? .unchanged
+    }
+
+    private func connection(for payload: PushPayload) -> Connection? {
+        // A later version of the format, or something that is not ours: nothing is read from it.
+        guard case .v1(let push) = payload, push.kind == .alert,
+              let entry = registry.entry(forTag: push.tag)
+        else { return nil }
+        return connections().first { $0.id == entry.connectionId }
+    }
+
     public func rewrite(_ payload: PushPayload) async -> NotificationRewrite {
-        // A later version of the format, or something that is not ours: the generic text stays.
-        guard case .v1(let push) = payload, push.kind == .alert else { return .unchanged }
-        guard let entry = registry.entry(forTag: push.tag),
-              let connection = connections().first(where: { $0.id == entry.connectionId })
-        else { return .unchanged }
+        guard case .v1(let push) = payload, let connection = connection(for: payload) else { return .unchanged }
 
         let grouping = NotificationRewrite(threadIdentifier: connection.id.uuidString)
         guard let ref = push.ref else { return grouping }

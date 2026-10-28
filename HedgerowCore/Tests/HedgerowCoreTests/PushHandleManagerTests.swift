@@ -250,7 +250,8 @@ struct PushWorld {
 
         await world.manager.release(connectionId: connection.id, connection: connection)
 
-        #expect(world.log.all == ["server0.unregister \(deviceId)", "relay.revoke h-1"])
+        // The relay first (that stops the pushes), then the server.
+        #expect(world.log.all == ["relay.revoke h-1", "server0.unregister \(deviceId)"])
         #expect(world.registry.entries().isEmpty)
         #expect(world.server(0).deviceIds.isEmpty)
         #expect(world.relay.handleIds.isEmpty)
@@ -376,8 +377,8 @@ struct PushWorld {
 
     @Test(arguments: [
         (429, PushConnectionStatus.tryLater), (409, PushConnectionStatus.tryLater),
-        (404, PushConnectionStatus.tryLater), (503, PushConnectionStatus.tryLater),
-        (401, PushConnectionStatus.failed),
+        (404, PushConnectionStatus.relayReset), (503, PushConnectionStatus.tryLater),
+        (401, PushConnectionStatus.relayReset),
     ])
     func relayRefusalsNeverReachTheServer(status: Int, expected: PushConnectionStatus) async {
         let world = PushWorld()
@@ -404,7 +405,7 @@ struct PushWorld {
     @Test func withoutARelayRegistrationNothingIsSent() async {
         let world = PushWorld(registered: false)
         defer { world.cleanUp() }
-        #expect(await world.manager.ensure(world.connections[0]) == .tryLater)
+        #expect(await world.manager.ensure(world.connections[0]) == .relayReset)
         #expect(world.log.all.isEmpty)
     }
 
@@ -559,7 +560,18 @@ struct PushWorld {
 
         let result = await world.reconcile()
 
-        #expect(result.values.allSatisfy { $0 == .tryLater })
+        #expect(result.values.allSatisfy { $0 == .relayReset })
+        #expect(world.log.all == ["relay.list"])
+    }
+
+    @Test func aRelayThatRefusesTheManageKeyMeansTheSame() async {
+        let world = PushWorld(connectionCount: 2)
+        defer { world.cleanUp() }
+        world.relay.listStatus = 401
+
+        let result = await world.reconcile()
+
+        #expect(result.values.allSatisfy { $0 == .relayReset })
         #expect(world.log.all == ["relay.list"])
     }
 
@@ -612,7 +624,54 @@ struct PushWorld {
         let world = PushWorld(connectionCount: 2, registered: false)
         defer { world.cleanUp() }
         let result = await world.reconcile()
-        #expect(result.values.allSatisfy { $0 == .tryLater })
+        #expect(result.values.allSatisfy { $0 == .relayReset })
         #expect(world.log.all.isEmpty)
+    }
+}
+
+// MARK: - Token replaced
+
+@Suite struct PushRenewTests {
+    @Test func aReplacedTokenGetsAFreshHandle() async throws {
+        let world = PushWorld()
+        defer { world.cleanUp() }
+        let connection = world.connections[0]
+        _ = await world.manager.ensure(connection)
+        let old = try #require(world.registry.entry(forConnection: connection.id))
+        // The server dropped the devices registered with the old token.
+        world.server(0).deleteStatus = 404
+        world.log.clear()
+
+        let status = await world.manager.renew(connection)
+
+        #expect(status == .on)
+        #expect(world.log.all == ["relay.revoke h-1", "server0.unregister \(old.serverDeviceId)", "relay.create", "server0.register"])
+        let fresh = try #require(world.registry.entry(forConnection: connection.id))
+        #expect(fresh.tag != old.tag)
+        #expect(fresh.relayHandleId == "h-2")
+        #expect(world.relay.handleIds == ["h-2"])
+        #expect(world.registry.entries().count == 1)
+    }
+
+    @Test func ensureAloneWouldHaveKeptTheDeadHandle() async {
+        // Why renew exists: an entry that is in the registry counts as on, whatever the server did.
+        let world = PushWorld()
+        defer { world.cleanUp() }
+        _ = await world.manager.ensure(world.connections[0])
+        world.log.clear()
+        #expect(await world.manager.ensure(world.connections[0]) == .on)
+        #expect(world.log.all.isEmpty)
+    }
+
+    @Test func renewReportsWhyItFailed() async {
+        let world = PushWorld()
+        defer { world.cleanUp() }
+        _ = await world.manager.ensure(world.connections[0])
+        world.server(0).registerStatus = 409
+        world.server(0).registerCode = "push_disabled"
+
+        #expect(await world.manager.renew(world.connections[0]) == .serverPushOff)
+        #expect(world.registry.entries().isEmpty)
+        #expect(world.relay.handleIds.isEmpty)
     }
 }

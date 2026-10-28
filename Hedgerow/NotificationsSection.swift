@@ -92,11 +92,11 @@ private struct ConnectionPushRow: View {
     private static func message(for status: PushConnectionStatus) -> LocalizedStringKey? {
         switch status {
         case .off, .on: nil
-        case .working: "Setting up…"
-        case .serverPushOff: "This server hasn't turned on push. Add the Hedgerow app channel to its notifications."
+        case .working, .relayReset: "Setting up…"
+        case .serverPushOff: "This server hasn't turned on push. Add the Hedgerow app channel to its notifications. Hedgerow will try again when it opens, at most once an hour, or switch this off and on to try now."
         case .serverNotReady: "This server can't send push yet. It may need an update."
         case .tryLater: "Couldn't set this up right now. Hedgerow will try again later."
-        case .failed: "Couldn't set this up. Hedgerow will try again the next time it opens."
+        case .failed: "Couldn't set this up. Hedgerow will try again when it opens, at most once an hour, or switch this off and on to try now."
         }
     }
 }

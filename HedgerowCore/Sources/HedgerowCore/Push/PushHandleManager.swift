@@ -6,8 +6,8 @@ import Foundation
 /// - Setting up: tag, then the relay's handle, then the server's registration. If the server says
 ///   no, the relay's handle is revoked again at once (the relay allows 32 handles per device and
 ///   10 new ones an hour).
-/// - Taking down: the local entry goes first, then the server's registration, then the relay's
-///   handle. A step that fails does not stop the next one, and the entry is gone either way. What a
+/// - Taking down: the local entry goes first, then the relay's handle (that stops the pushes), then
+///   the server's registration. A step that fails does not stop the next one, and the entry is gone either way. What a
 ///   failed step leaves behind is cleaned up later: a handle nobody has in the registry is revoked by
 ///   `reconcile`, and a server that is pushed to a revoked handle forgets it on `gone`.
 /// - Nothing here loops. A failure is a status; the caller decides when to try again (next launch).
@@ -55,7 +55,8 @@ public actor PushHandleManager {
     /// Makes sure `connection` has a handle that the relay and the server know. With one already
     /// (made for this relay device) nothing is sent.
     public func ensure(_ connection: Connection) async -> PushConnectionStatus {
-        guard let registration = registration() else { return .tryLater }
+        // No registration at the relay (yet): the app registers the device first, then asks again.
+        guard let registration = registration() else { return .relayReset }
         if let entry = registry.entry(forConnection: connection.id) {
             if entry.relayDeviceId == registration.deviceId { return .on }
             // Made for a relay device that is gone: the handle is dead. Take down what is left.
@@ -98,6 +99,14 @@ public actor PushHandleManager {
         return .on
     }
 
+    /// The connection's token was replaced. The server drops the devices that were registered with the
+    /// old token, so the handle it has is dead although the registry still lists it: take it down
+    /// (the server's answer to the delete may well be `404`, which counts as removed) and make a new one.
+    public func renew(_ connection: Connection) async -> PushConnectionStatus {
+        await release(connectionId: connection.id, connection: connection)
+        return await ensure(connection)
+    }
+
     // MARK: Taking down
 
     /// Push is off for this connection, or the connection is going away. `connection` is `nil` when
@@ -118,11 +127,12 @@ public actor PushHandleManager {
     }
 
     private func takeDown(_ entry: PushEntry, connection: Connection?) async {
-        await unregisterAtServer(entry, connection: connection)
+        // The relay first: that is what stops the pushes. Then the server forgets the device.
         if let registration = registration(), registration.deviceId == entry.relayDeviceId {
             await revokeAtRelay(entry.relayHandleId, registration: registration)
         }
         // A handle of another relay device died with that device.
+        await unregisterAtServer(entry, connection: connection)
     }
 
     private func unregisterAtServer(_ entry: PushEntry, connection: Connection?) async {
@@ -149,7 +159,7 @@ public actor PushHandleManager {
         connections: [Connection], wanted: Set<UUID>, blocked: @Sendable (UUID) -> PushConnectionStatus?
     ) async -> [UUID: PushConnectionStatus] {
         guard let registration = registration() else {
-            return Dictionary(uniqueKeysWithValues: wanted.map { ($0, PushConnectionStatus.tryLater) })
+            return Dictionary(uniqueKeysWithValues: wanted.map { ($0, PushConnectionStatus.relayReset) })
         }
 
         // What the relay still has. Failing to ask only means no cleaning this time.
@@ -157,9 +167,11 @@ public actor PushHandleManager {
         do {
             live = Set(try await relay.listHandles(registration).map(\.handleId))
         } catch PigeonError.gone {
-            // The relay device is gone; the next keep-alive registers it again and every entry is
-            // then stale. Nothing to make a handle on now.
-            return Dictionary(uniqueKeysWithValues: wanted.map { ($0, PushConnectionStatus.tryLater) })
+            // The relay device is gone (or its manage key is refused): the app registers it again,
+            // and every entry is then stale. Nothing to make a handle on now.
+            return Dictionary(uniqueKeysWithValues: wanted.map { ($0, PushConnectionStatus.relayReset) })
+        } catch PigeonError.invalidCredentials {
+            return Dictionary(uniqueKeysWithValues: wanted.map { ($0, PushConnectionStatus.relayReset) })
         } catch {
             live = nil
         }

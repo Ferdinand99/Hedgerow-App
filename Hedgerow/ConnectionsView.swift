@@ -74,6 +74,7 @@ struct ConnectionsView: View {
             await push.connectionWillBeRemoved(connection)
             do {
                 try store.remove(connection.id)
+                push.connectionWasRemoved(connection.id)
                 model.syncCards()
             } catch {
                 removalError = userMessage(for: error)

@@ -481,6 +481,14 @@ public actor PigeonRegistrar {
         return record.registration
     }
 
+    /// The relay does not know this device any more, or refuses its manage key (`gone`,
+    /// `invalidCredentials` on a handle call): forget the registration, so the next token callback
+    /// registers a new device instead of waiting for the daily keep-alive to find out. Nothing is sent
+    /// to the relay: a device it does not know cannot be removed, and a refused key cannot remove it.
+    public func reregister() {
+        try? store.clear()
+    }
+
     /// Notifications are off: ask the relay to delete the device, then forget it here. The local
     /// side is cleared even when the relay cannot be reached (the app must say "off" either way;
     /// the relay drops an unheard-from device after 90 days). Returns whether the relay confirmed.

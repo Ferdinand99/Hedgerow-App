@@ -381,8 +381,9 @@ private struct CappingTransport: HTTPTransport {
         #expect(PushConnectionStatus(error: PigeonError.rateLimited(retryAfter: nil)) == .tryLater)
         #expect(PushConnectionStatus(error: PigeonError.limitReached) == .tryLater)
         #expect(PushConnectionStatus(error: PigeonError.unavailable) == .tryLater)
-        #expect(PushConnectionStatus(error: PigeonError.gone) == .tryLater)
-        #expect(PushConnectionStatus(error: PigeonError.invalidCredentials) == .failed)
+        // The relay lost the device or refuses its key: register again, nothing to wait for.
+        #expect(PushConnectionStatus(error: PigeonError.gone) == .relayReset)
+        #expect(PushConnectionStatus(error: PigeonError.invalidCredentials) == .relayReset)
         #expect(PushConnectionStatus(error: PigeonError.unexpected) == .failed)
         #expect(PushConnectionStatus(error: CancellationError()) == .tryLater)
     }
@@ -393,5 +394,7 @@ private struct CappingTransport: HTTPTransport {
         #expect(PushConnectionStatus.working.isProblem == false)
         #expect(PushConnectionStatus.serverPushOff.isProblem)
         #expect(PushConnectionStatus.tryLater.isProblem)
+        // Never held back for an hour: the device is registered again and the handles follow at once.
+        #expect(PushConnectionStatus.relayReset.isProblem == false)
     }
 }
