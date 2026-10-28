@@ -39,6 +39,8 @@ targets:
           NSAllowsArbitraryLoads: true
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Hedgerow connects to your own servers on your local network.
+        # Only the system's HTTPS/TLS (exempt): no export compliance questions on every upload.
+        ITSAppUsesNonExemptEncryption: false
         # The Keychain access group with the team prefix resolved at build time (read by AppStorage.swift).
         HedgerowKeychainAccessGroup: $(AppIdentifierPrefix)tools.hedgerow.app
         # Silent `sync` pushes from Postal Pigeon wake the app in the background.
