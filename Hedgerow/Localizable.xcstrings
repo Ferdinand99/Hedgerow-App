@@ -3552,7 +3552,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Stack trace"
+            "value" : "Kallstakk"
           }
         }
       }
