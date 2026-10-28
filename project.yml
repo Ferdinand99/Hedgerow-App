@@ -9,8 +9,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "3"
 packages:
   HedgerowCore:
     path: HedgerowCore
@@ -21,8 +21,11 @@ targets:
     deploymentTarget: "18.0"
     sources:
       - Hedgerow
+      - Shared
     dependencies:
       - package: HedgerowCore
+      # Embedded in the app: rewrites a notification with the real text (HedgerowNotificationService/).
+      - target: HedgerowNotificationService
     info:
       # Merged with the keys Xcode generates from the INFOPLIST_KEY_ settings below.
       path: Config/Hedgerow-Info.plist
@@ -73,6 +76,48 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Hedgerow
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+  # Notification Service Extension: wakes up for an alert push, fetches the text from the user's own server
+  # with the token in the shared Keychain and rewrites the notification. The logic is NotificationRewriter in
+  # HedgerowCore; this target is the thin shell around it.
+  HedgerowNotificationService:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - HedgerowNotificationService
+      # The App Group file locations and the Keychain access group, the same as the app uses.
+      - Shared
+    dependencies:
+      - package: HedgerowCore
+    info:
+      path: Config/HedgerowNotificationService-Info.plist
+      properties:
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, nb]
+        ITSAppUsesNonExemptEncryption: false
+        HedgerowKeychainAccessGroup: $(AppIdentifierPrefix)tools.hedgerow.app
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    entitlements:
+      path: Config/HedgerowNotificationService.entitlements
+      properties:
+        # The same App Group and Keychain access group as the app: the connection list, the tag
+        # registry and the tokens.
+        com.apple.security.application-groups:
+          - group.tools.hedgerow.app
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)tools.hedgerow.app
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tools.hedgerow.app.notification-service
+        DEVELOPMENT_TEAM: 76M3G78HV8
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Hedgerow
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
 schemes:
   Hedgerow:
     build:

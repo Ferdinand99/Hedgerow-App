@@ -41,8 +41,9 @@ public struct KeychainError: Error, Equatable, Sendable {
     public let status: OSStatus
 }
 
-/// Generic-password items, one per connection, readable only while the device is unlocked,
-/// never migrated to another device and never synchronised through iCloud.
+/// Generic-password items, one per connection, readable after the first unlock since the device
+/// started (the notification extension needs a token while the phone is locked), never migrated
+/// to another device and never synchronised through iCloud.
 public struct KeychainVault: TokenVault {
     public let service: String
     /// The Keychain access group the items live in (the app target's `keychain-access-groups`
@@ -72,7 +73,7 @@ public struct KeychainVault: TokenVault {
     public func save(_ token: String, for id: UUID) throws {
         let attributes: [String: Any] = [
             kSecValueData as String: Data(token.utf8),
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
         var status = SecItemUpdate(query(for: id) as CFDictionary, attributes as CFDictionary)
         if status == errSecItemNotFound {
@@ -98,6 +99,19 @@ public struct KeychainVault: TokenVault {
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainError(status: status)
         }
+    }
+
+    /// Tokens saved by earlier versions are readable only while the device is unlocked. This moves
+    /// every token of this vault to "after first unlock", so the notification extension can read
+    /// them on a locked phone. One call, no token is read. It needs an unlocked device (the app is
+    /// in the foreground); where it fails the tokens stay as they were and the next launch tries again.
+    @discardableResult
+    public func allowAccessAfterFirstUnlock() -> Bool {
+        let attributes: [String: Any] = [
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+        let status = SecItemUpdate(baseQuery() as CFDictionary, attributes as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
     }
 
     /// Removes every token this vault holds. Used when the connection list is reset, because

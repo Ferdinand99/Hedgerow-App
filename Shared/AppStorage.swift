@@ -2,13 +2,20 @@ import Foundation
 import HedgerowCore
 
 /// Where the app keeps its data. The connection list (no tokens) goes in the App Group
-/// container and the tokens in a Keychain access group, so the phase 5 widgets can read both.
+/// container and the tokens in a Keychain access group, so the phase 5 widgets and the
+/// notification extension can read both. Compiled into the app and into the extension.
 enum AppStorageLocation {
     static let appGroup = "group.tools.hedgerow.app"
     static let keychainGroupSuffix = ".tools.hedgerow.app"
 
     static var connectionsFile: URL {
         directory.appendingPathComponent("connections.json")
+    }
+
+    /// Which push tag belongs to which connection (no secrets). Written by the app, read by the
+    /// notification extension.
+    static var pushRegistryFile: URL {
+        directory.appendingPathComponent("push-tags.json")
     }
 
     /// Where a damaged connections file is moved by "Reset connections".

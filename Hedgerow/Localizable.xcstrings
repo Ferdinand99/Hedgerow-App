@@ -4002,6 +4002,108 @@
           }
         }
       }
+    },
+    "Send notifications from" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send notifications from"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send varsler fra"
+          }
+        }
+      }
+    },
+    "Setting up…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setting up…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setter opp …"
+          }
+        }
+      }
+    },
+    "This server hasn't turned on push. Add the Hedgerow app channel to its notifications." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This server hasn't turned on push. Add the Hedgerow app channel to its notifications."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serveren har ikke slått på push. Legg til Hedgerow-appen som varslingskanal på serveren."
+          }
+        }
+      }
+    },
+    "This server can't send push yet. It may need an update." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This server can't send push yet. It may need an update."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serveren kan ikke sende push ennå. Den trenger kanskje en oppdatering."
+          }
+        }
+      }
+    },
+    "Couldn't set this up right now. Hedgerow will try again later." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't set this up right now. Hedgerow will try again later."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fikk ikke satt opp dette akkurat nå. Hedgerow prøver igjen senere."
+          }
+        }
+      }
+    },
+    "Couldn't set this up. Hedgerow will try again the next time it opens." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't set this up. Hedgerow will try again the next time it opens."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fikk ikke satt opp dette. Hedgerow prøver igjen neste gang appen åpnes."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

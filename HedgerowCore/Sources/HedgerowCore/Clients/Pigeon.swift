@@ -7,8 +7,8 @@ import Security
 #endif
 
 // Postal Pigeon: the push relay. The app registers this device's APNs token with it and keeps
-// the device id and the manage key it gets back. Servers (Vigilant Vole, Keen Kestrel, Wise Wren)
-// get their own handles later; nothing here talks to them.
+// the device id and the manage key it gets back. Each connection (Vigilant Vole, Keen Kestrel,
+// Wise Wren) gets its own handle here, which the app then gives to that server (PushRoutes.swift).
 // API: Hedgerow-Relay docs/api.md, sections "Conventions" and "Devices and handles".
 
 /// `sandbox` for builds run from Xcode, `production` for TestFlight and the App Store.
@@ -49,6 +49,8 @@ public enum PigeonError: Error, Equatable, Sendable {
     case unavailable
     /// `401`: the manage key was refused.
     case invalidCredentials
+    /// `409 limit_reached`: the device already has the most handles it may have.
+    case limitReached
     /// The relay address is not https, so nothing was sent.
     case insecureURL
     /// Anything else: an answer the app does not understand, a redirect, an oversized body.
@@ -132,6 +134,68 @@ public struct PigeonClient: Sendable {
         throw Self.error(for: reply, gone: .gone)
     }
 
+    // MARK: Handles
+
+    /// `POST /v1/devices/{id}/handles`: a new handle for one connection. `tag` (16 random bytes,
+    /// unpadded base64url) comes back in every push for the handle, so the app can tell which
+    /// connection it belongs to. `404` is `PigeonError.gone` (the device is gone: register again),
+    /// `409` is `limitReached`, `429` is `rateLimited` (10 new handles an hour).
+    public func createHandle(_ registration: PigeonRegistration, tag: String) async throws -> PigeonHandle {
+        try requireWellFormed(registration)
+        guard PushTag.isWellFormed(tag) else { throw PigeonError.unexpected }
+        let body = try encode(CreateHandleBody(tag: tag))
+        let reply = try await send(
+            "POST", handlesPath(registration), manageKey: registration.manageKey, body: body
+        )
+        if reply.status == 409 { throw PigeonError.limitReached }
+        guard (200..<300).contains(reply.status) else { throw Self.error(for: reply, gone: .gone) }
+        guard let handle = try? JSONDecoder().decode(PigeonHandle.self, from: reply.data),
+              Self.isWellFormedID(handle.handleId, prefix: ""),
+              Self.isWellFormedID(handle.handle, prefix: "hrh_")
+        else { throw PigeonError.unexpected }
+        return handle
+    }
+
+    /// `DELETE /v1/devices/{id}/handles/{handle_id}`. A handle that is already gone counts as revoked.
+    public func revokeHandle(_ registration: PigeonRegistration, handleId: String) async throws {
+        try requireWellFormed(registration)
+        guard Self.isWellFormedID(handleId, prefix: "") else { throw PigeonError.unexpected }
+        let reply = try await send(
+            "DELETE", handlesPath(registration) + "/" + handleId, manageKey: registration.manageKey, body: nil
+        )
+        if (200..<300).contains(reply.status) || reply.status == 404 { return }
+        throw Self.error(for: reply, gone: .gone)
+    }
+
+    /// `GET /v1/devices/{id}/handles`: the handles the relay still has for this device (never their secrets).
+    public func listHandles(_ registration: PigeonRegistration) async throws -> [PigeonHandleInfo] {
+        try requireWellFormed(registration)
+        let reply = try await send("GET", handlesPath(registration), manageKey: registration.manageKey, body: nil)
+        guard (200..<300).contains(reply.status) else { throw Self.error(for: reply, gone: .gone) }
+        guard let list = try? JSONDecoder().decode(HandleList.self, from: reply.data) else {
+            throw PigeonError.unexpected
+        }
+        return list.handles
+    }
+
+    private struct CreateHandleBody: Encodable {
+        let tag: String
+    }
+
+    private struct HandleList: Decodable {
+        let handles: [PigeonHandleInfo]
+    }
+
+    private func handlesPath(_ registration: PigeonRegistration) -> String {
+        Self.devicesPath + "/" + registration.deviceId + "/handles"
+    }
+
+    private func requireWellFormed(_ registration: PigeonRegistration) throws {
+        guard Self.isWellFormedID(registration.deviceId, prefix: "hrd_"),
+              Self.isWellFormedID(registration.manageKey, prefix: "hrm_")
+        else { throw PigeonError.unexpected }
+    }
+
     // MARK: Plumbing
 
     private func encode(_ value: some Encodable) throws -> Data {
@@ -186,6 +250,44 @@ public struct PigeonClient: Sendable {
             ($0 >= 0x30 && $0 <= 0x39) || ($0 >= 0x41 && $0 <= 0x5A) || ($0 >= 0x61 && $0 <= 0x7A)
                 || $0 == 0x5F || $0 == 0x2D
         }
+    }
+}
+
+/// What the relay hands out for a new handle. `handle` (`hrh_…`) is what a server needs to push to this
+/// device; it is given to that one server and never kept, logged or shown. `handleId` is not secret.
+public struct PigeonHandle: Decodable, Sendable, Equatable {
+    public let handleId: String
+    public let handle: String
+
+    public init(handleId: String, handle: String) {
+        self.handleId = handleId
+        self.handle = handle
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case handleId = "handle_id"
+        case handle
+    }
+}
+
+extension PigeonHandle: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String { "PigeonHandle(handleId: \(handleId), handle: <hidden>)" }
+    public var debugDescription: String { description }
+}
+
+/// One entry of the relay's list of a device's handles.
+public struct PigeonHandleInfo: Decodable, Sendable, Equatable {
+    public let handleId: String
+    public let tag: String?
+
+    public init(handleId: String, tag: String?) {
+        self.handleId = handleId
+        self.tag = tag
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case handleId = "handle_id"
+        case tag
     }
 }
 

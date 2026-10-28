@@ -5,6 +5,7 @@ struct ConnectionsView: View {
     let store: ConnectionStore
     let model: OverviewModel
 
+    @Environment(PushController.self) private var push
     @State private var showingAdd = false
     @State private var replacingTokenFor: Connection?
     @State private var removalError: String?
@@ -36,7 +37,7 @@ struct ConnectionsView: View {
                 }
             }
 
-            NotificationsSection()
+            NotificationsSection(store: store)
         }
         .navigationTitle("Settings")
         .toolbar {
@@ -66,13 +67,19 @@ struct ConnectionsView: View {
         }
     }
 
-    /// Removes the token from the Keychain and the connection from the list.
+    /// Takes the push handle down (it needs the token), then removes the token from the Keychain and
+    /// the connection from the list.
     private func remove(_ connection: Connection) {
-        do {
-            try store.remove(connection.id)
-            model.syncCards()
-        } catch {
-            removalError = userMessage(for: error)
+        Task {
+            await push.connectionWillBeRemoved(connection)
+            do {
+                try store.remove(connection.id)
+                model.syncCards()
+            } catch {
+                removalError = userMessage(for: error)
+                // The connection stays, so it gets a handle again.
+                push.syncConnections()
+            }
         }
     }
 }

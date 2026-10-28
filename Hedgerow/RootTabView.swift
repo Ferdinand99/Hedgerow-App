@@ -21,6 +21,7 @@ struct RootTabView: View {
 
     @State var selection: AppTab = .overview
     @State private var picks = ServicePicks()
+    @Environment(PushController.self) private var push
 
     var body: some View {
         TabView(selection: $selection) {
@@ -49,6 +50,20 @@ struct RootTabView: View {
                     ConnectionsView(store: store, model: model)
                 }
             }
+        }
+        // A tap on a notification: the tab of that product, with that connection selected. Also
+        // when the tap is what started the app (the request is waiting here).
+        .onChange(of: push.openRequest, initial: true) { _, request in
+            guard let request else { return }
+            // Only one of the app's own connections can be shown.
+            if let connection = store.connections.first(where: { $0.id == request.connectionId }) {
+                showService(connection)
+            }
+            push.clearOpenRequest()
+        }
+        // A connection was added or removed: its handle follows.
+        .onChange(of: store.connections.map(\.id)) {
+            push.syncConnections()
         }
     }
 
