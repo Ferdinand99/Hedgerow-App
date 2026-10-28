@@ -72,8 +72,13 @@ final class IssueProjectsModel: ScreenModel {
 
     @ObservationIgnored private let connection: Connection
     @ObservationIgnored private let store: ConnectionStore
-    /// The counting that follows the last project list; a new load cancels it.
+    /// The counting that follows the last project list; a new load cancels it, and so does the
+    /// screen going away (`pauseCounts`).
     @ObservationIgnored private var countsTask: Task<Void, Never>?
+    /// True while the screen is away: nothing is counted then.
+    @ObservationIgnored private var countsPaused = false
+    /// True when counting was cut short (the screen went away) and some projects may still lack a count.
+    @ObservationIgnored private var countsInterrupted = false
 
     init(connection: Connection, store: ConnectionStore) {
         self.connection = connection
@@ -91,9 +96,43 @@ final class IssueProjectsModel: ScreenModel {
         let loaded = try await client.projects()
         guard ticket.isCurrent else { return }
         projects = loaded
-        let ids = loaded.prefix(Self.maxCounted).map(\.id)
+        // A new list: the old counts belong to the old list's counting, which was cancelled above.
+        countsInterrupted = false
+        startCounts(client: client, ids: loaded.prefix(Self.maxCounted).map(\.id), ticket: ticket)
+    }
+
+    /// The screen is going away (or the connection is being switched, which replaces the screen):
+    /// stop counting at once, so no request goes on for a list nobody looks at.
+    func pauseCounts() {
+        countsPaused = true
+        guard let task = countsTask else { return }
+        task.cancel()
+        countsTask = nil
+        countsInterrupted = true
+    }
+
+    /// The screen is back. If the counting was cut short, it carries on with the projects that still
+    /// have no count.
+    func resumeCounts() {
+        countsPaused = false
+        guard countsInterrupted, countsTask == nil else { return }
+        countsInterrupted = false
+        let missing = projects.prefix(Self.maxCounted).map(\.id).filter { counts[$0] == nil }
+        guard !missing.isEmpty, let client = try? kestrelClient(for: connection, store: store).get() else { return }
+        startCounts(client: client, ids: missing, ticket: loader.ticket)
+    }
+
+    /// Counts `ids` in a task of its own, unless the screen is away: then it waits for `resumeCounts`.
+    private func startCounts(client: KestrelClient, ids: [Int], ticket: LoadTracker.Ticket) {
+        if countsPaused {
+            countsInterrupted = true
+            return
+        }
         countsTask = Task { [weak self] in
             await self?.loadCounts(client: client, ids: ids, ticket: ticket)
+            // Done on its own (a cancelled one has already been replaced or dropped): nothing is
+            // left to resume, a project whose count failed is not asked again just for coming back.
+            if !Task.isCancelled { self?.countsTask = nil }
         }
     }
 
@@ -154,6 +193,10 @@ struct IssuesView: View {
             }
         }
         .refreshPolicy(model)
+        // Counting is for a screen somebody looks at: it stops when the list goes away (a pushed
+        // project, another tab, a switched connection) and carries on when it comes back.
+        .onAppear { model.resumeCounts() }
+        .onDisappear { model.pauseCounts() }
     }
 
     private var emptyContent: some View {
