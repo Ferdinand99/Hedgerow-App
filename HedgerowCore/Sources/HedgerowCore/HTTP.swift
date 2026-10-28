@@ -265,13 +265,13 @@ public struct HedgerowHTTP: Sendable {
 
     func exchange(
         _ method: String, _ path: String, base: URL, body: Data?,
-        alwaysJSON: Bool = false, maxBytes: Int = HedgerowHTTP.maxResponseBytes
+        alwaysJSON: Bool = false, maxBytes: Int = HedgerowHTTP.maxResponseBytes, timeout: TimeInterval = 15
     ) async throws -> Reply {
         // Checked before anything is sent, so a token never goes over plain http to a public host.
         guard isAllowedBaseURL(base), let url = Self.url(path, on: base) else {
             throw HedgerowError.insecureURL
         }
-        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: timeout)
         request.httpMethod = method
         request.httpShouldHandleCookies = false
         request.setValue("application/json", forHTTPHeaderField: "Accept")

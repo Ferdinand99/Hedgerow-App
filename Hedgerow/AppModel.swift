@@ -22,9 +22,14 @@ final class AppModel {
 
     private static func load() -> State {
         do {
-            let store = try ConnectionStore(
-                fileURL: AppStorageLocation.connectionsFile, vault: AppStorageLocation.makeVault()
-            )
+            let vault = AppStorageLocation.makeVault()
+            // Tokens saved by earlier versions could only be read while the phone is unlocked; the
+            // notification extension needs them on a locked one. The app is open, so this works now.
+            vault.allowAccessAfterFirstUnlock()
+            let store = try ConnectionStore(fileURL: AppStorageLocation.connectionsFile, vault: vault)
+            // Push handles follow the connections. Only a list that could be read is handed over: a
+            // damaged file must not look like "every connection was removed".
+            PushController.shared.attach(store)
             return .ready(store, OverviewModel(store: store))
         } catch {
             return .storageDamaged

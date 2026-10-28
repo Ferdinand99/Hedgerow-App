@@ -4002,6 +4002,108 @@
           }
         }
       }
+    },
+    "Send notifications from" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send notifications from"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send varsler fra"
+          }
+        }
+      }
+    },
+    "Setting up…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setting up…"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setter opp …"
+          }
+        }
+      }
+    },
+    "This server can't send push yet. It may need an update." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This server can't send push yet. It may need an update."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serveren kan ikke sende push ennå. Den trenger kanskje en oppdatering."
+          }
+        }
+      }
+    },
+    "Couldn't set this up right now. Hedgerow will try again later." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't set this up right now. Hedgerow will try again later."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fikk ikke satt opp dette akkurat nå. Hedgerow prøver igjen senere."
+          }
+        }
+      }
+    },
+    "This server hasn't turned on push. Add the Hedgerow app channel to its notifications. Hedgerow will try again when it opens, at most once an hour, or switch this off and on to try now." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This server hasn't turned on push. Add the Hedgerow app channel to its notifications. Hedgerow will try again when it opens, at most once an hour, or switch this off and on to try now."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serveren har ikke slått på push. Legg til Hedgerow-appen som varslingskanal på serveren. Hedgerow prøver igjen når appen åpnes, høyst en gang i timen, eller slå denne av og på for å prøve nå."
+          }
+        }
+      }
+    },
+    "Couldn't set this up. Hedgerow will try again when it opens, at most once an hour, or switch this off and on to try now." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't set this up. Hedgerow will try again when it opens, at most once an hour, or switch this off and on to try now."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fikk ikke satt opp dette. Hedgerow prøver igjen når appen åpnes, høyst en gang i timen, eller slå denne av og på for å prøve nå."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

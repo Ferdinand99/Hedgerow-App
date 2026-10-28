@@ -54,7 +54,8 @@ on the websites.
 - **Your servers only.** The app sends requests to the servers you added and nowhere else. No Hedgerow account, no
   relay of your data, and no third-party SDK that sees server data.
 - **Tokens stay on the device.** They are stored in the iOS Keychain or the Android Keystore, for this device only,
-  and are never included in backups.
+  and are never included in backups. On iOS they can be read after the first unlock since the phone started (not
+  only while it is unlocked), so the notification extension can fetch the text of a notification on a locked phone.
 - **Read-only tokens are recommended.** With a token that can write, every write action (pause, resolve, approve,
   roll back) is confirmed with Face ID, Touch ID or your device's biometrics first, so a lost phone cannot change
   things.

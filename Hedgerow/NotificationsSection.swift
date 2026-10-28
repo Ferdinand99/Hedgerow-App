@@ -1,8 +1,10 @@
+import HedgerowCore
 import SwiftUI
 
-/// The "Notifications" section of Settings: the switch, what state it is in, and (once this
-/// device is registered with the push service) the device id.
+/// The "Notifications" section of Settings: the switch, what state it is in, a switch for each
+/// connection (once this device is registered with the push service) and the device id.
 struct NotificationsSection: View {
+    let store: ConnectionStore
     @Environment(PushController.self) private var push
 
     var body: some View {
@@ -15,6 +17,16 @@ struct NotificationsSection: View {
 
             if push.phase == .denied {
                 Button("Open Settings") { push.openSystemSettings() }
+            }
+
+            // One switch per connection: each server sends its own notifications.
+            if push.phase == .registered, !store.connections.isEmpty {
+                Text("Send notifications from")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ForEach(store.connections) { connection in
+                    ConnectionPushRow(connection: connection)
+                }
             }
 
             // Not a secret: it only lets the push service find this device.
@@ -46,6 +58,45 @@ struct NotificationsSection: View {
         case .denied: "Notifications are turned off for Hedgerow in iOS Settings."
         case .unreachable: "Couldn't reach the push service, will try again."
         case .failed: "Something went wrong with the push service. Hedgerow will try again the next time it opens."
+        }
+    }
+}
+
+/// A connection's switch, and (when push is not working for it) why, in calm words.
+private struct ConnectionPushRow: View {
+    let connection: Connection
+    @Environment(PushController.self) private var push
+
+    var body: some View {
+        let status = push.status(for: connection.id)
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle(isOn: Binding(
+                get: { push.status(for: connection.id) != .off },
+                set: { push.setConnection(connection, on: $0) }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(connection.displayName)
+                    Text(verbatim: "\(connection.kind.displayName) · \(connection.baseURL.host() ?? connection.baseURL.absoluteString)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if let message = Self.message(for: status) {
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private static func message(for status: PushConnectionStatus) -> LocalizedStringKey? {
+        switch status {
+        case .off, .on: nil
+        case .working, .relayReset: "Setting up…"
+        case .serverPushOff: "This server hasn't turned on push. Add the Hedgerow app channel to its notifications. Hedgerow will try again when it opens, at most once an hour, or switch this off and on to try now."
+        case .serverNotReady: "This server can't send push yet. It may need an update."
+        case .tryLater: "Couldn't set this up right now. Hedgerow will try again later."
+        case .failed: "Couldn't set this up. Hedgerow will try again when it opens, at most once an hour, or switch this off and on to try now."
         }
     }
 }
