@@ -697,6 +697,23 @@
         }
       }
     },
+    "Auto window %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto window %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisk vindu %@"
+          }
+        }
+      }
+    },
     "Automatic" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -710,6 +727,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Automatisk"
+          }
+        }
+      }
+    },
+    "Available updates" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available updates"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tilgjengelige oppdateringer"
           }
         }
       }
@@ -2430,6 +2464,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Oppdateringer"
+          }
+        }
+      }
+    },
+    "Updates automatically" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updates automatically"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oppdateres automatisk"
           }
         }
       }

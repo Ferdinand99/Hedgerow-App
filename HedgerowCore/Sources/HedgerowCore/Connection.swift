@@ -71,6 +71,11 @@ public enum ConnectionStoreError: Error, Equatable, Sendable {
 @MainActor @Observable
 public final class ConnectionStore {
     public private(set) var connections: [Connection]
+    /// Counts the changes to the saved tokens: it goes up whenever a token is saved, replaced or
+    /// removed, and never on a read. A screen that lets the person replace a token remembers it when
+    /// the sheet opens and compares it when the sheet closes, to reload only if something changed
+    /// (the token itself is never compared or kept). Not observed by views: it is read in handlers.
+    @ObservationIgnored public private(set) var tokenChanges = 0
 
     @ObservationIgnored private let fileURL: URL
     @ObservationIgnored private let vault: any TokenVault
@@ -119,10 +124,12 @@ public final class ConnectionStore {
             kind: kind
         )
         try vault.save(token, for: connection.id)
+        tokenChanges += 1
         do {
             try persist(connections + [connection])
         } catch {
             try? vault.delete(for: connection.id)
+            tokenChanges += 1
             throw error
         }
         connections.append(connection)
@@ -133,6 +140,7 @@ public final class ConnectionStore {
     /// and no token is left behind unseen.
     public func remove(_ id: UUID) throws {
         try vault.delete(for: id)
+        tokenChanges += 1
         guard connections.contains(where: { $0.id == id }) else { return }
         try persist(connections.filter { $0.id != id })
         connections.removeAll { $0.id == id }
@@ -143,6 +151,7 @@ public final class ConnectionStore {
             throw ConnectionStoreError.unknownConnection
         }
         try vault.save(Self.cleaned(token: token), for: id)
+        tokenChanges += 1
     }
 
     /// Checks that `token` is accepted by the saved connection `id`, with the same viewer call
