@@ -418,22 +418,34 @@ private func requestAuthorization() async -> Bool {
 
 /// A notification that arrives while the app is open is shown as a banner with sound. A tap on one
 /// opens the tab of the connection it came from.
+///
+/// The completion-handler variants, not the async ones: UIKit wants the answer to a tap on the main
+/// thread, and the async variants of a delegate that is not on the main actor run on a background
+/// executor and answer from there, which crashed the app on a tap. Only plain values (the connection
+/// id) cross over to the main thread, where the tab is opened and the system gets its answer.
 final class ForegroundPresenter: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
     func userNotificationCenter(
-        _ center: UNUserNotificationCenter, willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        [.banner, .list, .sound]
+        _ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .list, .sound])
     }
 
     func userNotificationCenter(
-        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse
-    ) async {
-        guard response.actionIdentifier == UNNotificationDefaultActionIdentifier else { return }
+        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
         let content = response.notification.request.content
-        guard let id = Self.connectionId(userInfo: content.userInfo, threadIdentifier: content.threadIdentifier) else {
-            return
+        let id: UUID? = response.actionIdentifier == UNNotificationDefaultActionIdentifier
+            ? Self.connectionId(userInfo: content.userInfo, threadIdentifier: content.threadIdentifier)
+            : nil
+        nonisolated(unsafe) let done = completionHandler
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                if let id { PushController.shared.openConnection(id) }
+            }
+            done()
         }
-        await MainActor.run { PushController.shared.openConnection(id) }
     }
 
     /// Which of the app's own connections a notification belongs to. The payload is only used as a
