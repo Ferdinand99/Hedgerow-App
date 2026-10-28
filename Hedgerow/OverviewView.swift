@@ -10,6 +10,8 @@ struct OverviewView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var showingAdd = false
     @State private var replacingTokenFor: Connection?
+    /// The store's `tokenChanges` when the token sheet opened, to tell "Cancel" from "Save".
+    @State private var tokenChangesWhenSheetOpened = 0
 
     var body: some View {
         Group {
@@ -60,7 +62,12 @@ struct OverviewView: View {
             Task { await model.refresh() }
         }
         .onChange(of: replacingTokenFor) { _, new in
-            if new == nil { Task { await model.refresh() } }
+            if new != nil {
+                tokenChangesWhenSheetOpened = store.tokenChanges
+            } else if store.tokenChanges != tokenChangesWhenSheetOpened {
+                // Only a token that was saved (or removed) reloads; cancelling the sheet changes nothing.
+                Task { await model.refresh() }
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await model.refresh() } }

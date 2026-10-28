@@ -312,6 +312,54 @@ import FoundationNetworking
         #expect(try Data(contentsOf: file) == before)
     }
 
+    @Test func tokenChangesCountsSavesAndRemovalsButNotReads() async throws {
+        let file = tempFile()
+        defer { cleanUp(file) }
+        let vault = InMemoryVault()
+        let store = try makeStore(file: file, vault: vault, transport: try stub())
+        #expect(store.tokenChanges == 0)
+
+        // Saving a token with a new connection counts.
+        let added = try await store.add(url: base, token: secret, name: nil)
+        let afterAdd = store.tokenChanges
+        #expect(afterAdd > 0)
+
+        // Reading, listing and checking a token change nothing.
+        _ = try store.token(for: added.id)
+        _ = try store.token(for: UUID())
+        _ = store.connections
+        try await store.verifyToken(secret, for: added.id)
+        #expect(store.tokenChanges == afterAdd)
+
+        // Replacing the token counts, also with the same token again.
+        try store.replaceToken(added.id, token: "vv_new_token")
+        let afterReplace = store.tokenChanges
+        #expect(afterReplace > afterAdd)
+        try store.replaceToken(added.id, token: "vv_new_token")
+        #expect(store.tokenChanges > afterReplace)
+
+        // A replacement that fails changes nothing.
+        let beforeFailures = store.tokenChanges
+        #expect(throws: HedgerowError.unauthorized) { try store.replaceToken(added.id, token: " ") }
+        #expect(throws: ConnectionStoreError.unknownConnection) { try store.replaceToken(UUID(), token: "vv_x") }
+        #expect(store.tokenChanges == beforeFailures)
+
+        // Removing the connection removes the token, which counts.
+        try store.remove(added.id)
+        #expect(store.tokenChanges > beforeFailures)
+    }
+
+    @Test func tokenChangesDoesNotCountAnAddThatNeverSavedAToken() async throws {
+        let file = tempFile()
+        defer { cleanUp(file) }
+        let store = try makeStore(file: file, vault: InMemoryVault(), transport: try stub(accepted: "other"))
+
+        await #expect(throws: (any Error).self) {
+            try await store.add(url: base, token: secret, name: nil)
+        }
+        #expect(store.tokenChanges == 0)
+    }
+
     @Test func verifyTokenChecksTheSavedConnectionAndStoresNothing() async throws {
         let file = tempFile()
         defer { cleanUp(file) }
