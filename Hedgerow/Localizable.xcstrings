@@ -579,7 +579,7 @@
       }
     },
     "Add a service" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -596,7 +596,7 @@
       }
     },
     "Address" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -647,7 +647,7 @@
       }
     },
     "API token" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -766,7 +766,7 @@
       }
     },
     "Can't reach it" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -783,7 +783,7 @@
       }
     },
     "Can't reach it (last seen %@)" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -800,7 +800,7 @@
       }
     },
     "Can't reach this address. Check the address and your network." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -817,7 +817,7 @@
       }
     },
     "Can't read the token (device locked?)" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -834,7 +834,7 @@
       }
     },
     "Cancel" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -885,7 +885,7 @@
       }
     },
     "Connect" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -902,6 +902,7 @@
       }
     },
     "Connect Vigilant Vole, Keen Kestrel or Wise Wren to see how they are doing." : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -918,7 +919,7 @@
       }
     },
     "Connecting…" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -935,7 +936,7 @@
       }
     },
     "Connections" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -969,7 +970,7 @@
       }
     },
     "Couldn't remove the connection." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -986,7 +987,7 @@
       }
     },
     "Couldn't reset the connections." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1003,7 +1004,7 @@
       }
     },
     "Couldn't save the token in the Keychain." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1037,7 +1038,7 @@
       }
     },
     "Enter a valid address, for example https://vole.example.com" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1054,7 +1055,7 @@
       }
     },
     "Everything looks fine" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1156,7 +1157,7 @@
       }
     },
     "Name (optional)" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1173,7 +1174,7 @@
       }
     },
     "Needs attention" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1190,7 +1191,7 @@
       }
     },
     "New API token" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1224,7 +1225,7 @@
       }
     },
     "No connections" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1241,7 +1242,7 @@
       }
     },
     "No Hedgerow app found here" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1326,7 +1327,7 @@
       }
     },
     "No services yet" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1377,7 +1378,7 @@
       }
     },
     "OK" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1469,7 +1470,7 @@
       }
     },
     "Overview" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1486,6 +1487,7 @@
       }
     },
     "Plain http is only accepted for addresses on your own network (LAN, Tailscale). Everything else needs https." : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1519,7 +1521,7 @@
       }
     },
     "Problem" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1587,7 +1589,7 @@
       }
     },
     "Remove" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1604,7 +1606,7 @@
       }
     },
     "Replace token" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1638,7 +1640,7 @@
       }
     },
     "Reset" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1655,7 +1657,7 @@
       }
     },
     "Reset all connections?" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1672,7 +1674,7 @@
       }
     },
     "Reset connections" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1774,6 +1776,7 @@
       }
     },
     "Save" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1984,7 +1987,7 @@
       }
     },
     "Something is down" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2001,7 +2004,7 @@
       }
     },
     "Something needs attention" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2018,7 +2021,7 @@
       }
     },
     "Something went wrong." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2103,7 +2106,7 @@
       }
     },
     "That connection no longer exists." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2120,6 +2123,7 @@
       }
     },
     "The file with your connections is damaged. You can reset it and add the services again. Tokens saved in the Keychain are removed too." : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2136,7 +2140,7 @@
       }
     },
     "The server answered with an error (%lld)." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2153,7 +2157,7 @@
       }
     },
     "The token doesn't work" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2170,7 +2174,7 @@
       }
     },
     "This address isn't allowed (http outside your own network)" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2187,7 +2191,7 @@
       }
     },
     "This address isn't allowed. Use https, or http only for addresses on your own network." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2204,7 +2208,7 @@
       }
     },
     "Unexpected answer from the server" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2221,7 +2225,7 @@
       }
     },
     "Unknown" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2289,6 +2293,7 @@
       }
     },
     "Updated %@" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2305,6 +2310,7 @@
       }
     },
     "Updated just now" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2321,6 +2327,7 @@
       }
     },
     "Use a read-only token if you can. It is stored in this device's Keychain and only sent to the address above." : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2337,6 +2344,7 @@
       }
     },
     "Use a read-only token if you can. It is stored in this device's Keychain and only sent to the address of this service." : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2404,7 +2412,7 @@
       }
     },
     "Your saved connections can't be read" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2421,6 +2429,7 @@
       }
     },
     "Monitors" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2437,6 +2446,7 @@
       }
     },
     "Issues" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2453,6 +2463,7 @@
       }
     },
     "Updates" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2486,6 +2497,7 @@
       }
     },
     "Settings" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2502,6 +2514,7 @@
       }
     },
     "Open" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2518,6 +2531,7 @@
       }
     },
     "Choose connection" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2534,6 +2548,7 @@
       }
     },
     "%@ isn't connected" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2550,6 +2565,7 @@
       }
     },
     "Connect it to see its data in this tab." : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2566,6 +2582,7 @@
       }
     },
     "Add %@" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2582,6 +2599,7 @@
       }
     },
     "Loading…" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2598,6 +2616,7 @@
       }
     },
     "Check your network and that the service is running." : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2614,6 +2633,7 @@
       }
     },
     "The server refused the saved token. Replace it with one that works." : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {

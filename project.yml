@@ -64,6 +64,9 @@ targets:
         DEVELOPMENT_TEAM: 76M3G78HV8
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # The catalog is kept by hand (every key "manual"): no Swift symbols generated from its keys
+        # (one key, "Open", is a Swift keyword and stops the build when symbols are on).
+        STRING_CATALOG_GENERATE_SYMBOLS: NO
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
