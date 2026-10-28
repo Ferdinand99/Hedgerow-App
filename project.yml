@@ -41,6 +41,9 @@ targets:
         NSLocalNetworkUsageDescription: Hedgerow connects to your own servers on your local network.
         # The Keychain access group with the team prefix resolved at build time (read by AppStorage.swift).
         HedgerowKeychainAccessGroup: $(AppIdentifierPrefix)tools.hedgerow.app
+        # Silent `sync` pushes from Postal Pigeon wake the app in the background.
+        UIBackgroundModes:
+          - remote-notification
     entitlements:
       path: Config/Hedgerow.entitlements
       properties:
@@ -50,6 +53,9 @@ targets:
         # ...and the tokens in this Keychain access group.
         keychain-access-groups:
           - $(AppIdentifierPrefix)tools.hedgerow.app
+        # Push notifications through Postal Pigeon. Xcode's automatic signing changes this to
+        # `production` for archives (TestFlight, App Store); a build run from Xcode uses the sandbox.
+        aps-environment: development
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: tools.hedgerow.app

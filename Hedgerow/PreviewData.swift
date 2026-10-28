@@ -69,12 +69,12 @@ enum PreviewData {
 
 #Preview("Tabs, mixed") {
     let (store, model) = PreviewData.mixed()
-    return RootTabView(store: store, model: model)
+    return RootTabView(store: store, model: model).environment(PushController.shared)
 }
 
 #Preview("Tabs, empty") {
     let (store, model) = PreviewData.make([])
-    return RootTabView(store: store, model: model)
+    return RootTabView(store: store, model: model).environment(PushController.shared)
 }
 
 #Preview("Add") {
@@ -84,6 +84,6 @@ enum PreviewData {
 
 #Preview("Connections") {
     let (store, model) = PreviewData.mixed()
-    return NavigationStack { ConnectionsView(store: store, model: model) }
+    return NavigationStack { ConnectionsView(store: store, model: model) }.environment(PushController.shared)
 }
 #endif

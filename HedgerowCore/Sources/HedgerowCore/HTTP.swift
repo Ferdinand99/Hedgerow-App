@@ -241,6 +241,32 @@ public struct HedgerowHTTP: Sendable {
     private func perform(
         _ method: String, _ path: String, base: URL, body: Data?
     ) async throws -> (data: Data, status: Int) {
+        let reply = try await exchange(method, path, base: base, body: body)
+        switch reply.status {
+        case 200..<300: return (reply.data, reply.status)
+        // Only a redirect the rules refused gets here (to another host or scheme, as a gateway's
+        // sign-in page does): whatever answers is not the Hedgerow product that was asked for.
+        case 300..<400: throw HedgerowError.notHedgerow
+        case 401: throw HedgerowError.unauthorized
+        case 403: throw HedgerowError.forbidden
+        default: throw HedgerowError.badResponse(reply.status)
+        }
+    }
+
+    /// An answer of any status. The URL rules, the redirect rules and the size limit apply as for
+    /// every other call; only the mapping of the status to an error is left to the caller (Postal
+    /// Pigeon reads error codes and `Retry-After` itself).
+    struct Reply: Sendable {
+        let status: Int
+        let data: Data
+        /// `Retry-After` in whole seconds, when the header is there and is a number.
+        let retryAfter: Int?
+    }
+
+    func exchange(
+        _ method: String, _ path: String, base: URL, body: Data?,
+        alwaysJSON: Bool = false, maxBytes: Int = HedgerowHTTP.maxResponseBytes
+    ) async throws -> Reply {
         // Checked before anything is sent, so a token never goes over plain http to a public host.
         guard isAllowedBaseURL(base), let url = Self.url(path, on: base) else {
             throw HedgerowError.insecureURL
@@ -254,20 +280,17 @@ public struct HedgerowHTTP: Sendable {
         }
         if let body {
             request.httpBody = body
+        }
+        if body != nil || alwaysJSON {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
 
-        let (data, response) = try await transport.send(request, maxBytes: Self.maxResponseBytes)
-        if data.count > Self.maxResponseBytes { throw HedgerowError.tooLarge }
-        switch response.statusCode {
-        case 200..<300: return (data, response.statusCode)
-        // Only a redirect the rules refused gets here (to another host or scheme, as a gateway's
-        // sign-in page does): whatever answers is not the Hedgerow product that was asked for.
-        case 300..<400: throw HedgerowError.notHedgerow
-        case 401: throw HedgerowError.unauthorized
-        case 403: throw HedgerowError.forbidden
-        default: throw HedgerowError.badResponse(response.statusCode)
-        }
+        let (data, response) = try await transport.send(request, maxBytes: maxBytes)
+        if data.count > maxBytes { throw HedgerowError.tooLarge }
+        let retryAfter = response.value(forHTTPHeaderField: "Retry-After")
+            .flatMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+            .flatMap { $0 >= 0 ? $0 : nil }
+        return Reply(status: response.statusCode, data: data, retryAfter: retryAfter)
     }
 
     /// `path` appended to the base (keeping any path prefix the service lives under).

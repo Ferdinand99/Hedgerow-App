@@ -3,11 +3,17 @@ import SwiftUI
 
 @main
 struct HedgerowApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var app = AppModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             RootView(app: app)
+                .environment(PushController.shared)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { PushController.shared.returnedToApp() }
         }
     }
 }
