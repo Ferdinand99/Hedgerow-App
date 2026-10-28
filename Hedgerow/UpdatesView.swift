@@ -93,6 +93,23 @@ extension WrenMode {
     }
 }
 
+extension WrenUpdateGroup {
+    var title: Text {
+        switch self {
+        case .waitingForApproval: Text("Waiting for approval")
+        case .updatesAutomatically: Text("Updates automatically")
+        case .available: Text("Available updates")
+        }
+    }
+}
+
+/// "02:00–04:00 (Europe/Oslo)": the hours are in the site's time zone, when the server told which.
+private func autoWindowText(_ window: WrenAutoWindow, timeZone: String?) -> String {
+    let hours = "\(window.start)–\(window.end)"
+    guard let timeZone, !timeZone.isEmpty else { return hours }
+    return "\(hours) (\(timeZone))"
+}
+
 extension WrenTargetKind {
     /// `nil` for a kind this app does not know: nothing is better than a wrong word.
     var label: LocalizedStringKey? {
@@ -127,8 +144,9 @@ struct WrenName: View {
 /// servers only add to them, so when those two fail (in any way) the tab shows without them.
 @MainActor @Observable
 final class UpdatesModel: ScreenModel {
-    /// Sorted by server, then name.
-    private(set) var waiting: [WrenTarget] = []
+    /// The targets with an update, by the mode of their server; inside a section sorted by server,
+    /// then name.
+    private(set) var sections: [WrenUpdateSection] = []
     /// Soonest first.
     private(set) var scheduled: [WrenRun] = []
     /// Newest first, without the scheduled ones.
@@ -161,7 +179,7 @@ final class UpdatesModel: ScreenModel {
         let (loadedTargets, loadedRuns, loadedSchedules, loadedServers) =
             try await (targets, runs, schedules, serverList)
         guard ticket.isCurrent else { return }
-        waiting = wrenSortedTargets(loadedTargets)
+        sections = wrenUpdateSections(wrenSortedTargets(loadedTargets), servers: loadedServers)
         // A run that is only scheduled is under "Scheduled", not among the runs that happened.
         let scheduledIds = Set(loadedSchedules.scheduled.map(\.id))
         scheduled = loadedSchedules.scheduled.sorted { ($0.scheduledFor ?? .distantFuture) < ($1.scheduledFor ?? .distantFuture) }
@@ -178,15 +196,16 @@ final class UpdatesModel: ScreenModel {
 /// The content of the Updates tab: what waits for approval, what is scheduled, the latest runs and
 /// the servers with their agents. Read only.
 struct UpdatesView: View {
-    /// How many waiting targets show before "Show all": 88 rows are cheap in a lazy list, but the
-    /// first screen should show every section, not 88 containers.
+    /// How many targets of one section show before "Show all": 88 rows are cheap in a lazy list, but
+    /// the first screen should show every section, not 88 containers.
     static let collapsedLimit = 10
 
     let context: ServiceContext
     let store: ConnectionStore
 
     @State private var model: UpdatesModel
-    @State private var showAllWaiting = false
+    /// The sections that show all their targets.
+    @State private var expanded: Set<WrenUpdateGroup> = []
 
     init(context: ServiceContext, store: ConnectionStore) {
         self.context = context
@@ -222,7 +241,12 @@ struct UpdatesView: View {
             if let problem = model.problem {
                 ServiceProblemBanner(problem: problem, lastSeen: model.lastLoaded, replaceToken: context.replaceToken)
             }
-            waitingSection
+            if model.sections.isEmpty {
+                upToDateSection
+            }
+            ForEach(model.sections) { section in
+                updateSection(section)
+            }
             if !model.scheduled.isEmpty {
                 scheduledSection
             }
@@ -234,31 +258,45 @@ struct UpdatesView: View {
         .refreshable { await model.load() }
     }
 
-    // MARK: Waiting for approval
+    // MARK: Updates, by what the server does with them
 
-    private var waitingSection: some View {
-        let shown = showAllWaiting ? model.waiting : Array(model.waiting.prefix(Self.collapsedLimit))
+    private var upToDateSection: some View {
+        Section {
+            Label("Everything up to date", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        }
+    }
+
+    private func updateSection(_ section: WrenUpdateSection) -> some View {
+        let isExpanded = expanded.contains(section.group)
+        let shown = isExpanded ? section.targets : Array(section.targets.prefix(Self.collapsedLimit))
         return Section {
-            if model.waiting.isEmpty {
-                Label("Everything up to date", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-            }
             ForEach(shown) { target in
                 TargetRow(target: target)
             }
-            if model.waiting.count > Self.collapsedLimit {
+            if section.targets.count > Self.collapsedLimit {
                 Button {
-                    showAllWaiting.toggle()
+                    if isExpanded {
+                        expanded.remove(section.group)
+                    } else {
+                        expanded.insert(section.group)
+                    }
                 } label: {
-                    if showAllWaiting {
+                    if isExpanded {
                         Text("Show fewer")
                     } else {
-                        Text("Show all \(model.waiting.count) updates")
+                        Text("Show all \(section.targets.count) updates")
                     }
                 }
             }
         } header: {
-            SectionHeader(count: model.waiting.count) { Text("Waiting for approval") }
+            SectionHeader(count: section.targets.count) { section.group.title }
+        } footer: {
+            if !section.autoWindows.isEmpty {
+                let hours = section.autoWindows.map { autoWindowText($0, timeZone: model.timeZone) }
+                    .joined(separator: ", ")
+                Text("Auto window \(hours)")
+            }
         }
     }
 
@@ -477,7 +515,7 @@ private struct ServerRow: View {
             if server.mode == .auto, let window = server.autoWindow {
                 HStack(spacing: 6) {
                     Text("Auto window")
-                    Text(verbatim: windowText(window))
+                    Text(verbatim: autoWindowText(window, timeZone: timeZone))
                     if windowOpen {
                         Text(verbatim: "·")
                         Text("Open now")
@@ -504,11 +542,5 @@ private struct ServerRow: View {
             }
         }
         .accessibilityElement(children: .combine)
-    }
-
-    private func windowText(_ window: WrenAutoWindow) -> String {
-        let hours = "\(window.start)–\(window.end)"
-        guard let timeZone, !timeZone.isEmpty else { return hours }
-        return "\(hours) (\(timeZone))"
     }
 }

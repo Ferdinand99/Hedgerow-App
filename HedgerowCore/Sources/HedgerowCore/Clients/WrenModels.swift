@@ -168,6 +168,61 @@ public func wrenSortedTargets(_ targets: [WrenTarget]) -> [WrenTarget] {
     }
 }
 
+/// The sections of the Updates tab, in the order they are shown.
+public enum WrenUpdateGroup: Sendable, Equatable, Hashable, CaseIterable {
+    /// The server's mode is `approve`: a person has to approve.
+    case waitingForApproval
+    /// The server's mode is `auto`: Wren updates it by itself inside the auto window.
+    case updatesAutomatically
+    /// The mode is `notify`, or the server or its mode is not known.
+    case available
+}
+
+public struct WrenUpdateSection: Sendable, Equatable, Identifiable {
+    public let group: WrenUpdateGroup
+    /// In the order they were given.
+    public let targets: [WrenTarget]
+    /// For `.updatesAutomatically`: the auto windows of the servers these targets live on, each
+    /// window once, in the order of the targets. Empty for the other sections and when no window is known.
+    public let autoWindows: [WrenAutoWindow]
+
+    public var id: WrenUpdateGroup { group }
+
+    public init(group: WrenUpdateGroup, targets: [WrenTarget], autoWindows: [WrenAutoWindow] = []) {
+        self.group = group
+        self.targets = targets
+        self.autoWindows = autoWindows
+    }
+}
+
+/// Splits the targets with an update into the sections of the Updates tab by the mode of the server
+/// each one lives on (`/updates` carries no mode, `/servers` does). A target whose server is not in
+/// `servers` (or has no server id, or whose mode is unknown, or when `servers` is empty because that
+/// request failed) lands under `.available`. Sections without targets are left out; the targets keep
+/// their order.
+public func wrenUpdateSections(_ targets: [WrenTarget], servers: [WrenServer]) -> [WrenUpdateSection] {
+    let byId = Dictionary(servers.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    var grouped: [WrenUpdateGroup: [WrenTarget]] = [:]
+    var windows: [WrenAutoWindow] = []
+    for target in targets {
+        let server = target.serverId.flatMap { byId[$0] }
+        let group: WrenUpdateGroup
+        switch server?.mode {
+        case .approve: group = .waitingForApproval
+        case .auto: group = .updatesAutomatically
+        case .notify, .unknown, nil: group = .available
+        }
+        grouped[group, default: []].append(target)
+        if group == .updatesAutomatically, let window = server?.autoWindow, !windows.contains(window) {
+            windows.append(window)
+        }
+    }
+    return WrenUpdateGroup.allCases.compactMap { group in
+        guard let targets = grouped[group], !targets.isEmpty else { return nil }
+        return WrenUpdateSection(group: group, targets: targets, autoWindows: group == .updatesAutomatically ? windows : [])
+    }
+}
+
 // MARK: - Runs
 
 public enum WrenRunStatus: String, Sendable, Equatable, CaseIterable {
