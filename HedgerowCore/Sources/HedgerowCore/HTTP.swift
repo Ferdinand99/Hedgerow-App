@@ -208,6 +208,11 @@ public struct HedgerowHTTP: Sendable {
         configuration.httpCookieStorage = nil
         configuration.httpShouldSetCookies = false
         configuration.urlCredentialStorage = nil
+        // ATS is switched off in the app (see project.yml), so the floor is set here: TLS 1.2.
+        // Not available in swift-corelibs-foundation (Linux), where the tests run without a network.
+        #if canImport(Darwin)
+        configuration.tlsMinimumSupportedProtocolVersion = .TLSv12
+        #endif
         return URLSession(configuration: configuration)
     }()
 
@@ -285,7 +290,14 @@ public struct HedgerowHTTP: Sendable {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
 
-        let (data, response) = try await transport.send(request, maxBytes: maxBytes)
+        // The request's own timeout only counts the silence between two pieces of data, so a server
+        // that keeps dripping bytes could hold a call (and its screen) for days. The whole exchange
+        // gets a limit of twice the timeout.
+        let transport = self.transport
+        let sent = request
+        let (data, response) = try await withDeadline(.seconds(timeout * 2)) {
+            try await transport.send(sent, maxBytes: maxBytes)
+        }
         if data.count > maxBytes { throw HedgerowError.tooLarge }
         let retryAfter = response.value(forHTTPHeaderField: "Retry-After")
             .flatMap { Int($0.trimmingCharacters(in: .whitespaces)) }

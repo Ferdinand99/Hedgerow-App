@@ -219,5 +219,23 @@ import FoundationNetworking
         #expect(configuration.httpCookieStorage == nil)
         #expect(configuration.httpShouldSetCookies == false)
         #expect(configuration.requestCachePolicy == .reloadIgnoringLocalCacheData)
+        #if canImport(Darwin)
+        #expect(configuration.tlsMinimumSupportedProtocolVersion == .TLSv12)
+        #endif
+    }
+
+    @Test func aServerThatNeverFinishesIsGivenUpOn() async throws {
+        struct Hanging: HTTPTransport {
+            func send(_ request: URLRequest, maxBytes: Int) async throws -> (Data, HTTPURLResponse) {
+                try await Task.sleep(for: .seconds(600))
+                throw HedgerowError.unexpectedResponse
+            }
+        }
+        let http = HedgerowHTTP(token: "t", transport: Hanging())
+        let started = ContinuousClock.now
+        await #expect(throws: HedgerowError.unreachable("timed out")) {
+            _ = try await http.exchange("GET", "/api/v1/x", base: base, body: nil, timeout: 0.1)
+        }
+        #expect(ContinuousClock.now - started < .seconds(10))
     }
 }
