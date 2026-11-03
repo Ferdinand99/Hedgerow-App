@@ -105,6 +105,10 @@ Hedgerow-App is part of [Hedgerow](https://hedgerow.tools/), with [Vigilant Vole
 [Keen Kestrel](https://hedgerow.tools/Keen-Kestrel/) and [Wise Wren](https://hedgerow.tools/Wise-Wren/). The website is
 at [hedgerow.tools/Hedgerow-App](https://hedgerow.tools/Hedgerow-App/).
 
+## Support
+
+Hedgerow is built in spare time and is free to use. If you find it useful, you can support it through [GitHub Sponsors](https://github.com/sponsors/Ferdinand99) or [Ko-fi](https://ko-fi.com/ferdinand99). Thank you.
+
 ## License
 
 [GNU AGPL-3.0-only](LICENSE)
