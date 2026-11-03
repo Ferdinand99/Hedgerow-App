@@ -108,3 +108,5 @@ at [hedgerow.tools/Hedgerow-App](https://hedgerow.tools/Hedgerow-App/).
 ## License
 
 [GNU AGPL-3.0-only](LICENSE)
+
+The licence texts of the Swift packages the app is built with are in [Hedgerow/ThirdPartyNotices.txt](Hedgerow/ThirdPartyNotices.txt), made by `scripts/ThirdPartyNotices.swift` from `Package.resolved`. CI fails when the file is out of date or when a package has a licence that is not allowed. After changing a dependency, run `swift package resolve` in `HedgerowCore`, then `swift scripts/ThirdPartyNotices.swift`, and commit the result.
