@@ -1,0 +1,9 @@
+THIRD-PARTY NOTICES
+
+Hedgerow is free software under the GNU Affero General Public License, version 3.
+It is built with the Swift packages listed below. Each section gives the name of the
+package, where it comes from and its licence text.
+
+This file is made by scripts/ThirdPartyNotices.swift from Package.resolved. Do not edit it.
+
+The app uses no third-party Swift packages at the moment.

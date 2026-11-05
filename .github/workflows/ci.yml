@@ -28,6 +28,26 @@ jobs:
       - name: Run tests
         run: swift test
 
+  # Hedgerow/ThirdPartyNotices.txt holds the licence texts of the Swift packages the app is built
+  # with (the app shows it in its settings). It is made from Package.resolved
+  # (scripts/ThirdPartyNotices.swift), so a changed dependency makes it stale: this job fails then.
+  # It also fails for a package with a licence that is not allowed or has no licence file.
+  notices:
+    name: Third-party notices (up to date, licences allowed)
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: The script stops on a licence it must not accept
+        run: scripts/test-third-party-notices.sh
+      - name: Resolve the packages of HedgerowCore
+        working-directory: HedgerowCore
+        run: swift package resolve
+      - name: ThirdPartyNotices.txt is up to date
+        run: |
+          swiftc -O -o "$RUNNER_TEMP/notices" scripts/ThirdPartyNotices.swift
+          "$RUNNER_TEMP/notices" --check
+
   app-build:
     name: Hedgerow app build (iOS Simulator)
     runs-on: macos-15
